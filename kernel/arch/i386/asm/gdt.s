@@ -26,8 +26,6 @@ GDT_load:
     movw %ax, %gs
     movw %ax, %ss
 
-    sti
-
     movl %ebp, %esp
     pop %ebp
     ret

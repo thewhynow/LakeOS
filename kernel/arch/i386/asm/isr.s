@@ -15,9 +15,6 @@ ISR\num:
     jmp isr_common
 .endm
 
-str:
-.string "ISR_COMMON\n"
-
 isr_common:
     pusha // pushes all general-purpose registers
     

@@ -11,9 +11,6 @@ void kernel_main(){
     printf("Loading GDT...");
     GDT_init();
     printf("GDT Loaded!\n");
-    printf("Loading IDT...");
-    IDT_init();
-    printf("IDT Loaded!\n");
     printf("Loading ISR...");
     ISR_init();
     printf("ISR Loaded!\n");

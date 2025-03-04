@@ -16,11 +16,11 @@ Initialization Control Word 1
     5-7         ignored on x86, set 0
 */              
 typedef enum {
-    PIC_ICW1_ICW4       = 0x01,
-    PIC_ICW1_SINGLE     = 0x02,
-    PIC_ICW1_INTERVAL4  = 0x04,
-    PIC_ICW1_LEVEL      = 0x08,
-    PIC_ICW1_INITIALIZE = 0x10
+    PIC_ICW1_ICW4       = 0b00000001,
+    PIC_ICW1_SINGLE     = 0b00000010,
+    PIC_ICW1_INTERVAL4  = 0b00000100,
+    PIC_ICW1_LEVEL      = 0b00001000,
+    PIC_ICW1_INITIALIZE = 0b00010000
 } PIC_ICW1;
 
 /*              
@@ -42,6 +42,7 @@ typedef enum {
     PIC_ICW4_SFNM          = 0x10
 } PIC_ICW4;
 
+#define PIC_CMD_END_OF_INT 0x20
 
 void PIC_configure(uint8_t offset_pic1, uint8_t offset_pic2){
     // control word 1
@@ -63,12 +64,12 @@ void PIC_configure(uint8_t offset_pic1, uint8_t offset_pic2){
     io_wait();
 
     // control word 4
-    port_write_byte(PIC1_DATA_PORT, PIC_ICW4_8086 | PIC_ICW4_AUTO_EOI);
+    port_write_byte(PIC1_DATA_PORT, PIC_ICW4_8086);
     io_wait();
-    port_write_byte(PIC2_DATA_PORT, PIC_ICW4_8086 | PIC_ICW4_AUTO_EOI);
+    port_write_byte(PIC2_DATA_PORT, PIC_ICW4_8086);
     io_wait();
 
-    // clear data registers
+    // unmask all interrupts
     port_write_byte(PIC1_DATA_PORT, 0);
     io_wait();
     port_write_byte(PIC2_DATA_PORT, 0);
@@ -118,4 +119,10 @@ uint16_t PIC_readIRQ_inservice_reg(){
     port_write_byte(PIC2_COMMAND_PORT, PIC_CMD_READ_ISR);
 
     return port_read_byte(PIC2_COMMAND_PORT) | (port_read_byte(PIC1_COMMAND_PORT) << 8); 
+}
+
+void PIC_end_of_int(int irq){
+    if (irq >= 8)
+        port_write_byte(PIC2_COMMAND_PORT, PIC_CMD_END_OF_INT);
+    port_write_byte(PIC1_COMMAND_PORT, PIC_CMD_END_OF_INT);
 }

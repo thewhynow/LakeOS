@@ -26,4 +26,19 @@ void IDT_enablegate(int int_num);
 
 void IDT_disablegate(int int_num);
 
+typedef struct {
+    uint16_t base_low;
+    uint16_t segment_select;
+    uint8_t reserved;
+    uint8_t flags;
+    uint16_t base_high;
+} __attribute__((__packed__)) IDT_entry_t;
+
+typedef struct {
+    uint16_t limit;
+    IDT_entry_t* ptr;
+} __attribute__((__packed__)) IDT_descriptor_t;
+
+extern IDT_descriptor_t IDT_descriptor;
+
 #endif

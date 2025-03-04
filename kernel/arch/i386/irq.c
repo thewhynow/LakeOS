@@ -2,29 +2,56 @@
 
 #define PIC_REMAP_OFFSET 0x20
 
-IRQ_handler_t IRQ_handlers[16];
-
 void IRQ_handler(registers_t* regs){
-    int irq = regs->int_num - PIC_REMAP_OFFSET;
+    int irq = regs->int_num;
 
-    if (IRQ_handlers[irq]){
-        // handle interrupts
-        IRQ_handlers[irq](regs);
-    }
-    else {
-        printf("undefined IRQ: %i", irq);
-    }
+    printf("undefined IRQ: %i\n", irq);
+
+    PIC_end_of_int(irq);
 }
 
-void IRQ_init() {
+void IRQ0();
+void IRQ1();
+void IRQ2();
+void IRQ3();
+void IRQ4();
+void IRQ5();
+void IRQ6();
+void IRQ7();
+void IRQ8();
+void IRQ9();
+void IRQ10();
+void IRQ11();
+void IRQ12();
+void IRQ13();
+void IRQ14();
+void IRQ15();
+
+void IDT_load(IDT_descriptor_t* descriptor);
+
+void IRQ_init() { 
     PIC_configure(PIC_REMAP_OFFSET, PIC_REMAP_OFFSET + 8);
 
-    for (int i = 0; i < 16; ++i)
-        IRQ_reg_handle(PIC_REMAP_OFFSET + i, IRQ_handler);
+    {
+        IDT_setgate(PIC_REMAP_OFFSET + 1, IRQ0, GDT_CODE_SEGMENT, IDT_FLAG_RING0 | IDT_FLAG_GATE_32BIT_INT | IDT_FLAG_PRESENT);
+        IDT_setgate(PIC_REMAP_OFFSET + 2, IRQ1, GDT_CODE_SEGMENT, IDT_FLAG_RING0 | IDT_FLAG_GATE_32BIT_INT | IDT_FLAG_PRESENT);
+        IDT_setgate(PIC_REMAP_OFFSET + 3, IRQ2, GDT_CODE_SEGMENT, IDT_FLAG_RING0 | IDT_FLAG_GATE_32BIT_INT | IDT_FLAG_PRESENT);
+        IDT_setgate(PIC_REMAP_OFFSET + 4, IRQ3, GDT_CODE_SEGMENT, IDT_FLAG_RING0 | IDT_FLAG_GATE_32BIT_INT | IDT_FLAG_PRESENT);
+        IDT_setgate(PIC_REMAP_OFFSET + 5, IRQ4, GDT_CODE_SEGMENT, IDT_FLAG_RING0 | IDT_FLAG_GATE_32BIT_INT | IDT_FLAG_PRESENT);
+        IDT_setgate(PIC_REMAP_OFFSET + 6, IRQ5, GDT_CODE_SEGMENT, IDT_FLAG_RING0 | IDT_FLAG_GATE_32BIT_INT | IDT_FLAG_PRESENT);
+        IDT_setgate(PIC_REMAP_OFFSET + 7, IRQ6, GDT_CODE_SEGMENT, IDT_FLAG_RING0 | IDT_FLAG_GATE_32BIT_INT | IDT_FLAG_PRESENT);
+        IDT_setgate(PIC_REMAP_OFFSET + 8, IRQ7, GDT_CODE_SEGMENT, IDT_FLAG_RING0 | IDT_FLAG_GATE_32BIT_INT | IDT_FLAG_PRESENT);
+        IDT_setgate(PIC_REMAP_OFFSET + 9, IRQ8, GDT_CODE_SEGMENT, IDT_FLAG_RING0 | IDT_FLAG_GATE_32BIT_INT | IDT_FLAG_PRESENT);
+        IDT_setgate(PIC_REMAP_OFFSET + 10, IRQ9, GDT_CODE_SEGMENT, IDT_FLAG_RING0 | IDT_FLAG_GATE_32BIT_INT | IDT_FLAG_PRESENT);
+        IDT_setgate(PIC_REMAP_OFFSET + 11, IRQ10, GDT_CODE_SEGMENT, IDT_FLAG_RING0 | IDT_FLAG_GATE_32BIT_INT | IDT_FLAG_PRESENT);
+        IDT_setgate(PIC_REMAP_OFFSET + 12, IRQ11, GDT_CODE_SEGMENT, IDT_FLAG_RING0 | IDT_FLAG_GATE_32BIT_INT | IDT_FLAG_PRESENT);
+        IDT_setgate(PIC_REMAP_OFFSET + 13, IRQ12, GDT_CODE_SEGMENT, IDT_FLAG_RING0 | IDT_FLAG_GATE_32BIT_INT | IDT_FLAG_PRESENT);
+        IDT_setgate(PIC_REMAP_OFFSET + 14, IRQ13, GDT_CODE_SEGMENT, IDT_FLAG_RING0 | IDT_FLAG_GATE_32BIT_INT | IDT_FLAG_PRESENT);
+        IDT_setgate(PIC_REMAP_OFFSET + 15, IRQ14, GDT_CODE_SEGMENT, IDT_FLAG_RING0 | IDT_FLAG_GATE_32BIT_INT | IDT_FLAG_PRESENT);
+        IDT_setgate(PIC_REMAP_OFFSET + 16, IRQ15, GDT_CODE_SEGMENT, IDT_FLAG_RING0 | IDT_FLAG_GATE_32BIT_INT | IDT_FLAG_PRESENT);
+    }
 
-    asm("sti");
-}
+    IDT_load(&IDT_descriptor);
 
-void IRQ_reg_handle(int irq, IRQ_handler_t handler){
-    IRQ_handlers[irq] = handler;
+    asm volatile ("sti");
 }

@@ -9,5 +9,5 @@ void PIC_mask(int irq);
 void PIC_unmask(int irq);
 uint16_t PIC_readIRQ_request_reg();
 uint16_t PIC_readIRQ_inservice_reg();
-
+void PIC_end_of_int(int irq);
 #endif

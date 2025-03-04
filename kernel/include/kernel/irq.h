@@ -3,6 +3,7 @@
 
 #include "pic.h"
 #include "isr.h"
+#include "idt.h"
 
 typedef void (*IRQ_handler_t)(registers_t* regs);
 

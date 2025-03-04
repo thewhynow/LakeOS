@@ -80,6 +80,5 @@ GDT_descriptor_t GDT_descriptor = (GDT_descriptor_t){
 };
 
 void GDT_init(){
-    int printf(const char* restrict, ...);
     GDT_load(&GDT_descriptor, GDT_CODE_SEGMENT, GDT_DATA_SEGMENT);
 }
