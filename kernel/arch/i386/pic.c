@@ -1,10 +1,5 @@
 #include "../../include/kernel/pic.h"
 
-#define PIC1_COMMAND_PORT 0x20
-#define PIC1_DATA_PORT    0x21
-#define PIC2_COMMAND_PORT 0xA0
-#define PIC2_DATA_PORT    0xA1
-
 /*
 Initialization Control Word 1
     0   IC4     if set, PIC expects to recieve ICW4 during init
@@ -69,10 +64,10 @@ void PIC_configure(uint8_t offset_pic1, uint8_t offset_pic2){
     port_write_byte(PIC2_DATA_PORT, PIC_ICW4_8086);
     io_wait();
 
-    // unmask all interrupts
-    port_write_byte(PIC1_DATA_PORT, 0);
+    // mask all interrupts
+    port_write_byte(PIC1_DATA_PORT, 0xFF);
     io_wait();
-    port_write_byte(PIC2_DATA_PORT, 0);
+    port_write_byte(PIC2_DATA_PORT, 0xFF);
     io_wait();
 }
 

@@ -8,7 +8,7 @@ IDT_descriptor_t IDT_descriptor = (IDT_descriptor_t){
 };
 
 void IDT_setgate(int int_num, void(*_base)(), uint16_t segment_descriptor, uint8_t flags){
-    uint32_t base = (uint32_t)(uint64_t)_base;
+    uint32_t base = (uint32_t)_base;
 
     IDT[int_num] = (IDT_entry_t){
         .base_low = base & 0xFFFF,
@@ -25,4 +25,10 @@ void IDT_enablegate(int int_num){
 
 void IDT_disablegate(int int_num){
     IDT[int_num].flags &= ~IDT_FLAG_PRESENT;
+}
+
+void IDT_load(IDT_descriptor_t* descriptor);
+
+void IDT_init(){
+    IDT_load(&IDT_descriptor);
 }

@@ -41,4 +41,6 @@ typedef struct {
 
 extern IDT_descriptor_t IDT_descriptor;
 
+void IDT_init();
+
 #endif

@@ -8,6 +8,8 @@ extern "C" {
     int printf(const char* __restrict, ...);
     int putchar(int);
     int puts(const char*);
+    int getchar();
+    char* gets(char*);
 #ifdef __cplusplus
 }
 #endif

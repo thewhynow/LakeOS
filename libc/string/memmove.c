@@ -3,14 +3,7 @@
 
 void* memmove(void* dst, const void* src, size_t size){
     if (dst < src){
-        while (size >= 8){
-            *(uint64_t*)dst = *(uint64_t*)src;
-            size -= 8;
-            dst += 8;
-            src += 8;
-        }
-
-        if (size >= 4){
+        while (size >= 4){
             *(uint32_t*)dst = *(uint32_t*)src;
             size -= 4;
             dst += 4;
@@ -32,14 +25,7 @@ void* memmove(void* dst, const void* src, size_t size){
         dst += size;
         src += size;
 
-        while (size >= 8){
-            *(uint64_t*)dst = *(uint64_t*)src;
-            size -= 8;
-            dst -= 8;
-            src -= 8;
-        }
-
-        if (size >= 4){
+        while (size >= 4){
             *(uint32_t*)dst = *(uint32_t*)src;
             size -= 4;
             dst -= 4;

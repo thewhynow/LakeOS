@@ -27,14 +27,22 @@ void terminal_init(){
 #define terminal_putentryat(c, color, x, y)\
     (terminal_buff[(y) * TERMINAL_WIDTH + (x)] = vga_entry((c), (color)))
 
+#define terminal_del_entry_at(x, y)\
+    (terminal_buff[(y) * TERMINAL_WIDTH + (x)] = vga_entry(' ', terminal_color))
+
+void terminal_delchar(){
+    terminal_del_entry_at(--terminal_col, terminal_row);
+}
+
 void terminal_scroll(){
-    memcpy(
-        terminal_buff + 1 * 80,
-        terminal_buff + 0 * 80,
+    memmove(
+        terminal_buff + 0 * 80 + 0,
+        terminal_buff + 1 * 80 + 0,
         80 * 24 * 2
     );
 
-    memset(terminal_buff + 24 * 80, 80, vga_entry(' ', terminal_color));
+    for (size_t i = 24 * 80; i < 24 * 80 + 80; ++i)
+        terminal_buff[i] = vga_entry(' ', terminal_color);
 
     terminal_col = 0;
     terminal_row = 24;

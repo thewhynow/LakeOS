@@ -6,7 +6,7 @@ else
     assemble_path="/home/thewhynow/opt/cross/bin/i686-elf-as"
 fi
 
-c_flags="-std=gnu99 -ffreestanding -Wall -Wextra"
+c_flags="-std=gnu99 -ffreestanding -Wall -Wextra -D_KERNEL_LIBC"
 
 $compiler_path -c kernel/kernel/kernel.c        -o kernel.o   $c_flags
 $compiler_path -c kernel/arch/i386/tty.c        -o tty.o      $c_flags
@@ -16,10 +16,14 @@ $compiler_path -c kernel/arch/i386/idt.c        -o idt.o      $c_flags
 $compiler_path -c kernel/arch/i386/isr.c        -o isr.o      $c_flags
 $compiler_path -c kernel/arch/i386/io.c         -o io.o       $c_flags
 $compiler_path -c kernel/arch/i386/pic.c        -o pic.o      $c_flags
+$compiler_path -c kernel/arch/i386/pit.c        -o pit.o      $c_flags
+$compiler_path -c kernel/arch/i386/ps2.c        -o ps2.o      $c_flags
 
 $compiler_path -c libc/stdio/printf.c           -o printf.o   $c_flags
 $compiler_path -c libc/stdio/putchar.c          -o putchar.o  $c_flags
 $compiler_path -c libc/stdio/puts.c             -o puts.o     $c_flags
+$compiler_path -c libc/stdio/getchar.c          -o getchar.o  $c_flags
+$compiler_path -c libc/stdio/gets.c             -o gets.o     $c_flags
 
 $compiler_path -c libc/stdlib/abort.c           -o abort.o    $c_flags
 
@@ -28,6 +32,7 @@ $compiler_path -c libc/string/memcpy.c          -o memcpy.o   $c_flags
 $compiler_path -c libc/string/memmove.c         -o memmove.o  $c_flags
 $compiler_path -c libc/string/memset.c          -o memset.o   $c_flags
 $compiler_path -c libc/string/strlen.c          -o strlen.o   $c_flags
+$compiler_path -c libc/string/strncat.c         -o strncat.o  $c_flags
 
 $assemble_path kernel/arch/i386/asm/boot.s      -o boot.o
 $assemble_path kernel/arch/i386/asm/crti.s      -o crti.o

@@ -3,6 +3,10 @@
 
 int putchar(int ic){
     char c = (char)ic;
-    terminal_write(&c, sizeof(c));
+    #ifdef _KERNEL_LIBC
+    terminal_putchar(c);
+    #else
+    /* implement stdout */
+    #endif
     return ic;
 }

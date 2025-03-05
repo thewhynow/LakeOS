@@ -4,10 +4,17 @@
 #include "pic.h"
 #include "isr.h"
 #include "idt.h"
+#include "pit.h"
+#include "tty.h"
+#include "pit.h"
+#include "ps2.h"
 
-typedef void (*IRQ_handler_t)(registers_t* regs);
+typedef void (*IRQ_handler_t)();
+
+extern void kernel_panic();
 
 void IRQ_init();
-void IRQ_reg_handle(int irq, IRQ_handler_t handler);
+
+#define PIC_REMAP_OFFSET 0x20
 
 #endif

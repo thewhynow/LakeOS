@@ -2,14 +2,7 @@
 #include "../include/types.h"
 
 void* memcpy(void* restrict dst, const void* restrict src, size_t len){
-    while (len >= 8){
-        *(uint64_t*)dst = *(uint64_t*)src;
-        len -= 8;
-
-        dst += 8;
-        src += 8;
-    }
-    if (len >= 4){
+    while (len >= 4){
         *(uint32_t*)dst = *(uint32_t*)src; 
         len -= 4;
 

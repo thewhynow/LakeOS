@@ -71,6 +71,7 @@ int printf(const char* restrict format, ...){
                         ++bytes_written;
                         i /= 10;
                     } while(i);
+
                     break;
                 }
 
@@ -84,7 +85,7 @@ int printf(const char* restrict format, ...){
             ++format;
         }
         else {
-            putchar(*(format++));
+            putchar(*format++);
         }
     }
 
