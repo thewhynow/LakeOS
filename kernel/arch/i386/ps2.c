@@ -105,18 +105,22 @@ char* PS2_read(){
         asm volatile ("hlt");
         if (0 < keycode && keycode <= 0x58){
             if (keycode == PS2_BACKSPACE){
-                terminal_delchar();
-                ps2_stdin[strlen(ps2_stdin) - 1] = '\0';
+                if (ps2_stdin[0]){
+                    terminal_delchar();
+                    ps2_stdin[strlen(ps2_stdin) - 1] = '\0';
+                }
             }
             else {
                 char c = KEYBOARD_MAP[(size_t)keycode];
-                if (c){
+                if (c && strlen(ps2_stdin) < PS2_STDIN_SIZE){
                     strncat(ps2_stdin, &c, 1);
                     terminal_putchar(c);
                 }
             }
         }
     }
+
+    keycode = 0;
 
     PIC_mask(KEYBOARD_IRQ);
     

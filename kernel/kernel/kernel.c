@@ -6,6 +6,7 @@
 #include "../include/kernel/isr.h"
 #include "../include/kernel/irq.h"
 #include "../include/kernel/pit.h"
+#include "../include/kernel/pmm.h"
 
 void kernel_main(){
     terminal_init();
@@ -21,16 +22,24 @@ void kernel_main(){
     printf("Loading IRQ...");
     IRQ_init();
     printf("IRQ Loaded!\n");
+    // printf("Loading PMM...");
+    PMM_init();
+    // printf("PMM Loaded!\n");
+
+    int* first_alloc = (int*)0;
+    *first_alloc = 12;
+    printf("first alloc: %i\n", *first_alloc);
+    kfree(first_alloc);
+
     printf("Welcome to lakeOS!\n");
 
     char string[0xFF];
 
-    printf("World: Hello, User!\n");
-    printf("What does the User respond?: ");
-
-    gets(string);
-
-    printf("\"%s!\", the User responds\n", string);
+    while (1){
+        gets(string);
+        printf("string: %s\n", string);
+        memset(string, 0, 0xFF - 1);
+    }
 
     for (;;);
 }

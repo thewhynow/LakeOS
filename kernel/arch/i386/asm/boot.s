@@ -2,7 +2,7 @@
 .set ALIGN,    1<<0             /* aligns modules on page boundaries */
 .set MEMINFO,  1<<1             /* provide memory map */
 .set FLAGS,    ALIGN | MEMINFO  /* multiboot flag field */
-.set MAGIC,    0x1badB002       /* magic number that lets bootloader find header */
+.set MAGIC,    0x1BADB002       /* magic number that lets bootloader find header */
 .set CHECKSUM, -(MAGIC + FLAGS) /* checksum of above */
 
 /* 
@@ -37,12 +37,14 @@ _start:
     /* 
     set up the "stack" with the stack pointer and 
     base pointer that will be used by C programs
-    */ 
+    */
 
     movl $stack_top, %esp // use 32-bit assembly, no lea required here
     movl %esp, %ebp
 
     cli // disable interrupts
+
+    movl %ebx, multiboot_info // save the multiboot info
 
     call kernel_main // hand over control to the C portion, everything initialized
 

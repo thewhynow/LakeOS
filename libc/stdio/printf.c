@@ -34,6 +34,23 @@ static bool printint(int n){
     return true;
 }
 
+static bool printlong(long n){
+    char buff[30];
+    
+    int i = 0;
+
+    do {
+        buff[i++] = '0' + ((unsigned long)n % 10);
+        n /= 10;
+    } while(n);
+
+    while (i--)
+        if(putchar(buff[i]) == EOF)
+            return false;
+
+    return true;
+}
+
 int printf(const char* restrict format, ...){
     va_list params;
     va_start(params, format);
@@ -71,6 +88,18 @@ int printf(const char* restrict format, ...){
                         ++bytes_written;
                         i /= 10;
                     } while(i);
+
+                    break;
+                }
+
+                case 'p': {
+                    long p = va_arg(params, long);
+                    printlong(p);
+
+                    do {
+                        ++bytes_written;
+                        p /= 10;
+                    } while(p);
 
                     break;
                 }

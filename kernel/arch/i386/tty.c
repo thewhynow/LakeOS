@@ -31,7 +31,12 @@ void terminal_init(){
     (terminal_buff[(y) * TERMINAL_WIDTH + (x)] = vga_entry(' ', terminal_color))
 
 void terminal_delchar(){
-    terminal_del_entry_at(--terminal_col, terminal_row);
+    if (terminal_col)
+        terminal_del_entry_at(--terminal_col, terminal_row);
+    else 
+        terminal_del_entry_at(terminal_col = TERMINAL_WIDTH, --terminal_row);
+
+    terminal_update_cursor();
 }
 
 void terminal_scroll(){
@@ -62,13 +67,27 @@ void terminal_putchar(char c){
         if (++terminal_row == TERMINAL_HEIGHT)
            terminal_scroll();
     }
+
+    terminal_update_cursor();
 }
 
 void terminal_write(const char* str, size_t len){
     for (size_t i = 0; i < len; ++i)
-        terminal_putchar(str[i]);
+    terminal_putchar(str[i]);
 }
 
 void terminal_print(const char* str){
     terminal_write(str, strlen(str));
+}
+
+#define VGA_CURSOR_HIGH_PORT 0x3D5
+#define VGA_CURSOR_LOW_PORT 0x3D4
+
+void terminal_update_cursor(){
+    uint16_t index = terminal_row * TERMINAL_WIDTH + terminal_col;
+
+    port_write_byte(VGA_CURSOR_LOW_PORT, 0x0E);
+    port_write_byte(VGA_CURSOR_HIGH_PORT, (index >> 8) & 0xFF);
+    port_write_byte(VGA_CURSOR_LOW_PORT, 0x0F);
+    port_write_byte(VGA_CURSOR_HIGH_PORT, index & 0xFF);
 }

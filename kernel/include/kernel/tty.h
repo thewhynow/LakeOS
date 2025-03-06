@@ -8,5 +8,8 @@ void terminal_putchar(char c);
 void terminal_write(const char* str, size_t size);
 void terminal_print(const char* str);
 void terminal_delchar();
+void terminal_update_cursor();
+
+void port_write_byte(unsigned short port, unsigned char data);
 
 #endif

@@ -1,8 +1,6 @@
 https://wiki.osdev.org/Bare_Bones           : basic kernel + bootloader
 https://wiki.osdev.org/Meaty_Skeleton       : project structure
 https://www.youtube.com/watch?v=pfWjteMpcxE : GDT
-https://www.youtube.com/watch?v=XGSOl1QZVKI : IDT
-
-
+https://www.youtube.com/watch?v=XGSOl1QZVKI : PORTS (ignore the IDT section)
 
 https://www.youtube.com/watch?v=jwulDRMQ53I : GDT .. again (SOB)
