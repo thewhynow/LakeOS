@@ -4,3 +4,5 @@ https://www.youtube.com/watch?v=pfWjteMpcxE : GDT
 https://www.youtube.com/watch?v=XGSOl1QZVKI : PORTS (ignore the IDT section)
 
 https://www.youtube.com/watch?v=jwulDRMQ53I : GDT .. again (SOB)
+
+ 

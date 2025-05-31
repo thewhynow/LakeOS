@@ -11,9 +11,16 @@
 
 typedef void (*IRQ_handler_t)();
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 extern void kernel_panic();
 
 void IRQ_init();
+#ifdef __cplusplus
+}
+#endif
+
 
 #define PIC_REMAP_OFFSET 0x20
 

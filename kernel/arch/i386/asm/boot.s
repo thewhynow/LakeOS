@@ -1,6 +1,7 @@
 /* constants for multiboot header */
 .set ALIGN,    1<<0             /* aligns modules on page boundaries */
 .set MEMINFO,  1<<1             /* provide memory map */
+.set GRAPHICS, 0                /* dont use graphics */
 .set FLAGS,    ALIGN | MEMINFO  /* multiboot flag field */
 .set MAGIC,    0x1BADB002       /* magic number that lets bootloader find header */
 .set CHECKSUM, -(MAGIC + FLAGS) /* checksum of above */

@@ -55,7 +55,7 @@ void PIC_configure(uint8_t offset_pic1, uint8_t offset_pic2){
     // control word 3
     port_write_byte(PIC1_DATA_PORT, 0x4); // tell PIC1 that it has a slave at IRQ2 (0000 0100)
     io_wait();
-    port_write_byte(PIC2_DATA_PORT, 0x2); // tell PIC2 its cascade identity )(0000 0010)
+    port_write_byte(PIC2_DATA_PORT, 0x2); // tell PIC2 its cascade identity (0000 0010)
     io_wait();
 
     // control word 4

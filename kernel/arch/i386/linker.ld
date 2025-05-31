@@ -3,8 +3,8 @@ ENTRY(_start)
 
 /* where to put the different sections */
 SECTIONS {
-    /* no fucking idea what this does */
-    . = 2M;
+    /* kernel starts @ 1M */
+    . = 1M;
 
     /* place the multiboot header at the beginning of the executeable */
     .text BLOCK(4K) : ALIGN(4K) {
@@ -27,4 +27,6 @@ SECTIONS {
         *(COMMON)
         *(.bss)
     }
+
+    _end = .;
 }

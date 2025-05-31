@@ -10,7 +10,7 @@ typedef struct {
 }  __attribute__((__packed__)) GDT_entry_t;
 
 typedef struct {
-    uint16_t limit;          /* sizeof(GDT_t) - 1*/
+    uint16_t limit;          /* sizeof(GDT_t) - 1 */
     GDT_entry_t* gdt_p;      /* &GDT */ 
 } __attribute__((__packed__)) GDT_descriptor_t;
 
@@ -55,10 +55,6 @@ typedef enum {
         (base >> 24) & 0xFF                     \
     }
 
-extern GDT_entry_t GDT_entries[3];
-
-extern GDT_descriptor_t GDT_descriptor;
-
 void GDT_load(GDT_descriptor_t* descriptor, uint16_t code_seg, uint16_t data_seg);
 
 GDT_entry_t GDT_entries[3] = {
@@ -68,7 +64,7 @@ GDT_entry_t GDT_entries[3] = {
     GDT_ENTRY(0, 0xFFFFF,
               GDT_ACCESS_PRESENT | GDT_ACCESS_RING0 | GDT_ACCESS_CODE_SEGMENT | GDT_ACCESS_CODE_READABLE,
               (GDT_FLAG_32BIT | GDT_FLAG_GRANULARITY_4K)),
-    
+    /* Kernel 32-bit data segment */
     GDT_ENTRY(0, 0xFFFFF,
               GDT_ACCESS_PRESENT | GDT_ACCESS_RING0 | GDT_ACCESS_DATA_SEGMENT | GDT_ACCESS_DATA_WRITEABLE,
               (GDT_FLAG_32BIT | GDT_FLAG_GRANULARITY_4K)),

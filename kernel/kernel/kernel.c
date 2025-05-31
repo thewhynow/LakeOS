@@ -1,6 +1,6 @@
 #include "../../libc/include/stdio.h"
-#include "../include/kernel/tty.h"
 #include "../../libc/include/stdlib.h"
+#include "../include/kernel/tty.h"
 #include "../include/kernel/gdt.h"
 #include "../include/kernel/idt.h"
 #include "../include/kernel/isr.h"
@@ -22,23 +22,23 @@ void kernel_main(){
     printf("Loading IRQ...");
     IRQ_init();
     printf("IRQ Loaded!\n");
-    // printf("Loading PMM...");
+    printf("Loading PMM...");
     PMM_init();
-    // printf("PMM Loaded!\n");
-
-    int* first_alloc = (int*)0;
-    *first_alloc = 12;
-    printf("first alloc: %i\n", *first_alloc);
-    kfree(first_alloc);
+    printf("PMM Loaded!\n");
 
     printf("Welcome to lakeOS!\n");
 
-    char string[0xFF];
+    char* string;
+
+    string = alloc_page();
 
     while (1){
+        memset(string, 0, 100);
         gets(string);
         printf("string: %s\n", string);
-        memset(string, 0, 0xFF - 1);
+
+        if (!memcmp(string, "quit", 4))
+            for (;;);
     }
 
     for (;;);

@@ -3,9 +3,6 @@
 
 #include "../../../libc/include/types.h"
 
-void IDT_init();
-
-void IDT_setgate(int int_num, void(*_base)(), uint16_t segment_descriptor, uint8_t flags);
 
 typedef enum {
     IDT_FLAG_GATE_TASK       = 0x5,
@@ -22,10 +19,6 @@ typedef enum {
     IDT_FLAG_PRESENT         = 0x80,
 } IDT_FLAGS;
 
-void IDT_enablegate(int int_num);
-
-void IDT_disablegate(int int_num);
-
 typedef struct {
     uint16_t base_low;
     uint16_t segment_select;
@@ -39,8 +32,16 @@ typedef struct {
     IDT_entry_t* ptr;
 } __attribute__((__packed__)) IDT_descriptor_t;
 
-extern IDT_descriptor_t IDT_descriptor;
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 void IDT_init();
+void IDT_setgate(int int_num, void(*_base)(), uint16_t segment_descriptor, uint8_t flags);
+extern IDT_descriptor_t IDT_descriptor;
+void IDT_enablegate(int int_num);
+void IDT_disablegate(int int_num);
+#ifdef __cplusplus
+}
+#endif
 
 #endif

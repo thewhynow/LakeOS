@@ -15,7 +15,14 @@ typedef struct {
 
 } __attribute__((__packed__)) registers_t;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 void ISR_init();
+#ifdef __cplusplus
+}
+#endif
+
 
 typedef void(*ISR_handler_t)(registers_t* regs);
 

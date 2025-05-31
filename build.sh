@@ -1,14 +1,24 @@
 if [[ $(uname) == "Darwin" ]]; then
     compiler_path="i686-elf-gcc"
+    cxx_cmpl_path="i686-elf-g++"
     assemble_path="i686-elf-as"
     grub_iso_path="i686-elf-grub-mkrescue"
 else
     compiler_path="/home/thewhynow/opt/cross/bin/i686-elf-gcc"
+    cxx_cmpl_path="/home/thewhynow/opt/cross/bin/i686-elf-g++"
     assemble_path="/home/thewhynow/opt/cross/bin/i686-elf-as"
     grub_iso_path="grub-mkrescue"
 fi
 
-c_flags="-std=gnu99 -ffreestanding -Wall -Wextra -D_KERNEL_LIBC -g"
+x_flags="-std=c++98 -ffreestanding -Wall -Wextra -D_KERNEL_LIBC"
+c_flags="-std=gnu99 -ffreestanding -Wall -Wextra -D_KERNEL_LIBC "
+s_flags=""
+
+if [[ "$1" == "debug" ]]; then
+    c_flags+="-g"
+    s_flags+="-g"
+    x_flags+="-g"
+fi
 
 $compiler_path -c kernel/kernel/kernel.c        -o kernel.o    $c_flags
 $compiler_path -c kernel/arch/i386/tty.c        -o tty.o       $c_flags
@@ -39,24 +49,24 @@ $compiler_path -c libc/string/memset.c          -o memset.o    $c_flags
 $compiler_path -c libc/string/strlen.c          -o strlen.o    $c_flags
 $compiler_path -c libc/string/strncat.c         -o strncat.o   $c_flags
 
-$assemble_path kernel/arch/i386/asm/boot.s      -o boot.o -g
-$assemble_path kernel/arch/i386/asm/crti.s      -o crti.o -g
-$assemble_path kernel/arch/i386/asm/crtn.s      -o crtn.o -g
-$assemble_path kernel/arch/i386/asm/gdt.s       -o crtn.o -g
-$assemble_path kernel/arch/i386/asm/idt.s       -o _idt.o -g
-$assemble_path kernel/arch/i386/asm/isr.s       -o _isr.o -g
-$assemble_path kernel/arch/i386/asm/irq.s       -o _irq.o -g
+$assemble_path kernel/arch/i386/asm/boot.s      -o boot.o      $s_flags
+$assemble_path kernel/arch/i386/asm/crti.s      -o crti.o      $s_flags
+$assemble_path kernel/arch/i386/asm/crtn.s      -o crtn.o      $s_flags
+$assemble_path kernel/arch/i386/asm/gdt.s       -o crtn.o      $s_flags
+$assemble_path kernel/arch/i386/asm/idt.s       -o _idt.o      $s_flags
+$assemble_path kernel/arch/i386/asm/isr.s       -o _isr.o      $s_flags
+$assemble_path kernel/arch/i386/asm/irq.s       -o _irq.o      $s_flags
 
 $compiler_path -T kernel/arch/i386/linker.ld -o iso/boot/lakeos.bin $c_flags -lgcc -nostdlib *.o
 
 rm *.o
 
-# $grub_iso_path -o lakeos.iso iso
+if [[ "$1" == "debug" ]]; then
+    qemu-system-i386 -kernel iso/boot/lakeos.bin -s -S
+else
+    $grub_iso_path -o lakeos.iso iso
+    qemu-system-i386 -cdrom lakeos.iso
+    rm lakeos.iso
+fi
 
-# rm iso/boot/lakeos.bin
-
-qemu-system-i386 -kernel iso/boot/lakeos.bin -s -S
-
-# qemu-system-i386 -cdrom lakeos.iso -s -S
-
-rm lakeos.iso
+rm iso/boot/lakeos.bin
