@@ -80,14 +80,14 @@ void terminal_print(const char* str){
     terminal_write(str, strlen(str));
 }
 
-#define VGA_CURSOR_LOW_PORT  0x3D4
+#define VGA_CURSOR_LOW_PORT 0x3D4
 #define VGA_CURSOR_HIGH_PORT 0x3D5
 
 void terminal_update_cursor(){
     uint16_t index = terminal_row * TERMINAL_WIDTH + terminal_col;
 
-    port_write_byte(VGA_CURSOR_LOW_PORT, 0x0E);
-    port_write_byte(VGA_CURSOR_HIGH_PORT, (index >> 8));
     port_write_byte(VGA_CURSOR_LOW_PORT, 0x0F);
     port_write_byte(VGA_CURSOR_HIGH_PORT, index & 0xFF);
+    port_write_byte(VGA_CURSOR_LOW_PORT, 0x0E);
+    port_write_byte(VGA_CURSOR_HIGH_PORT, ((index >> 8) & 0xFF));
 }

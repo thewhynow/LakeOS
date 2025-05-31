@@ -5,6 +5,7 @@ ENTRY(_start)
 SECTIONS {
     /* kernel starts @ 1M */
     . = 1M;
+    _begin = .;
 
     /* place the multiboot header at the beginning of the executeable */
     .text BLOCK(4K) : ALIGN(4K) {

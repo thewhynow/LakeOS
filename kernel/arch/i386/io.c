@@ -2,6 +2,7 @@
 
 void port_write_byte(uint16_t port, uint8_t data){
     asm volatile("outb %0, %1" : : "a" (data), "Nd" (port));
+    return;
 }
 
 void port_write_word(uint16_t port, uint16_t data){

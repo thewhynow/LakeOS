@@ -5,6 +5,7 @@
 
 #include "../../../libc/include/string.h"
 #include "../../../libc/include/stdio.h"
+#include "../../../libc/include/stdlib.h"
 
 #define MEMORY_BLOCK_SIZE 0x1000
 

@@ -7,6 +7,9 @@ extern "C" {
 
 __attribute__((__noreturn__)) void abort();
 
+#define true 1
+#define false 0
+
 #ifdef __cplusplus
 }
 #endif

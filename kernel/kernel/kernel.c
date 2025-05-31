@@ -7,6 +7,7 @@
 #include "../include/kernel/irq.h"
 #include "../include/kernel/pit.h"
 #include "../include/kernel/pmm.h"
+#include "../include/kernel/vmm.h"
 
 void kernel_main(){
     terminal_init();
@@ -25,6 +26,9 @@ void kernel_main(){
     printf("Loading PMM...");
     PMM_init();
     printf("PMM Loaded!\n");
+    printf("Loading VMM...");
+    VMM_init();
+    printf("VMM Loaded!\n");
 
     printf("Welcome to lakeOS!\n");
 

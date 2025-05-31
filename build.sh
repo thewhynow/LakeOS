@@ -10,8 +10,8 @@ else
     grub_iso_path="grub-mkrescue"
 fi
 
-x_flags="-std=c++98 -ffreestanding -Wall -Wextra -D_KERNEL_LIBC"
-c_flags="-std=gnu99 -ffreestanding -Wall -Wextra -D_KERNEL_LIBC "
+x_flags="-std=c++98 -ffreestanding -Wall -Wextra -D_KERNEL_LIBC -nostdlib"
+c_flags="-std=gnu99 -ffreestanding -Wall -Wextra -D_KERNEL_LIBC -nostdlib"
 s_flags=""
 
 if [[ "$1" == "debug" ]]; then
@@ -33,6 +33,7 @@ $compiler_path -c kernel/arch/i386/ps2.c        -o ps2.o       $c_flags
 $compiler_path -c kernel/arch/i386/pmm.c        -o pmm.o       $c_flags
 $compiler_path -c kernel/arch/i386/multiboot.c  -o multiboot.o $c_flags
 $compiler_path -c kernel/arch/i386/pmm.c        -o pmm.o       $c_flags
+$compiler_path -c kernel/arch/i386/vmm.c        -o vmm.o       $c_flags
 
 $compiler_path -c libc/stdio/printf.c           -o printf.o    $c_flags
 $compiler_path -c libc/stdio/putchar.c          -o putchar.o   $c_flags
@@ -57,7 +58,7 @@ $assemble_path kernel/arch/i386/asm/idt.s       -o _idt.o      $s_flags
 $assemble_path kernel/arch/i386/asm/isr.s       -o _isr.o      $s_flags
 $assemble_path kernel/arch/i386/asm/irq.s       -o _irq.o      $s_flags
 
-$compiler_path -T kernel/arch/i386/linker.ld -o iso/boot/lakeos.bin $c_flags -lgcc -nostdlib *.o
+$compiler_path -T kernel/arch/i386/linker.ld -o iso/boot/lakeos.bin $c_flags -lgcc -lpie -fPIE *.o
 
 rm *.o
 
