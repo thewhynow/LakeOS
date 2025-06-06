@@ -15,9 +15,9 @@ c_flags="-std=gnu99 -ffreestanding -Wall -Wextra -D_KERNEL_LIBC -nostdlib"
 s_flags=""
 
 if [[ "$1" == "debug" ]]; then
-    c_flags+="-g"
-    s_flags+="-g"
-    x_flags+="-g"
+    c_flags+=" -g"
+    s_flags+=" -g"
+    x_flags+=" -g"
 fi
 
 $compiler_path -c kernel/kernel/kernel.c        -o kernel.o    $c_flags
@@ -58,7 +58,7 @@ $assemble_path kernel/arch/i386/asm/idt.s       -o _idt.o      $s_flags
 $assemble_path kernel/arch/i386/asm/isr.s       -o _isr.o      $s_flags
 $assemble_path kernel/arch/i386/asm/irq.s       -o _irq.o      $s_flags
 
-$compiler_path -T kernel/arch/i386/linker.ld -o iso/boot/lakeos.bin $c_flags -lgcc -lpie -fPIE *.o
+$compiler_path -T kernel/arch/i386/linker.ld -o iso/boot/lakeos.bin $c_flags -lgcc *.o
 
 rm *.o
 
@@ -70,4 +70,4 @@ else
     rm lakeos.iso
 fi
 
-rm iso/boot/lakeos.bin
+# rm iso/boot/lakeos.bin

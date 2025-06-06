@@ -56,10 +56,10 @@ static pd_entry_t *get_pde_from_vaddr(pdirectory_t *pdirectory, vaddr_t vaddr){
     return &pdirectory->entries[PAGE_DIR_INDEX(vaddr)];
 }
 
-static pdirectory_t *curr_pd;
+extern pdirectory_t *page_directory;
 
 static void switch_pd(pdirectory_t *new){
-    curr_pd = new;
+    page_directory = new;
     asm volatile("movl %0, %%cr3" :: "r"(new) : "memory");
 }
 
@@ -72,7 +72,7 @@ static void flush_tlb_entry(vaddr_t vaddr){
 }
 
 void vmm_map_page(void *paddr, void *vaddr){
-    pd_entry_t *pdir_entry = &curr_pd->entries[PAGE_DIR_INDEX((uint32_t)vaddr)];
+    pd_entry_t *pdir_entry = &page_directory->entries[PAGE_DIR_INDEX((uint32_t)vaddr)];
 
     ptable_t *ptable;
     /* page table not present, allocate */
@@ -117,7 +117,7 @@ void VMM_init() {
     }
 
     /* map physical 1MB to virtual 3GB */
-    for (int i = 0, paddr = 0x100000; i < 1024; ++i, paddr += 4096){
+    for (int i = 0, paddr = 0x00100000; i < 1024; ++i, paddr += 4096){
         pt_entry_t *entry = &table1->entries[i];
         ENTRY_ADD_ATTRIBUTE(*entry, PAGE_STRUCT_ENTRY_PRESENT);
         ENTRY_SET_FRAME(*entry, paddr);
@@ -128,7 +128,7 @@ void VMM_init() {
     memset(pdir, 0, sizeof *pdir);
 
     /* 1MB -> 3GB Page Table */
-    pd_entry_t *pd_entry = &pdir->entries[PAGE_DIR_INDEX(0xC0000000)];
+    pd_entry_t *pd_entry = &pdir->entries[(((0xC0000000) >> 22) & 0x3FF)];
     ENTRY_ADD_ATTRIBUTE(*pd_entry, PAGE_STRUCT_ENTRY_PRESENT);
     ENTRY_ADD_ATTRIBUTE(*pd_entry, PAGE_STRUCT_ENTRY_WRITEABLE);
     ENTRY_SET_FRAME(*pd_entry, table1);
@@ -146,6 +146,8 @@ void VMM_init() {
         "orl $0b10000000000000000000000000000000, %%eax\n"
         "movl %%eax, %%cr0\n"
         "movl $1f, %%eax\n"
+        "subl $0x00100000, %%eax\n"
+        "addl $0xC0000000, %%eax\n"
         "jmpl *%%eax\n"
         "1:\n"
     ::: "eax");

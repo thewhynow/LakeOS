@@ -14,11 +14,66 @@
     signature in own section so header can be forced to be within first 8KiB of file
 */
 
-.section .multiboot
+.section .text
     .align 4
     .long MAGIC
     .long FLAGS
     .long CHECKSUM
+
+.set PAGE_STRUCT_PRESENT,   0b00000000000000000000000000000001
+.set PAGE_STRUCT_WRITEABLE, 0b00000000000000000000000000000010
+.set PAGE_STRUCT_FLAGS,     0b00000000000000000000000000000011
+
+.align 1024
+.global page_directory
+page_directory:
+    .skip 4096
+
+/* identity map first 4MB */
+.align 1024
+identity_page_table:
+    .set p_addr, 0
+    .rept 1024
+        .long p_addr | (PAGE_STRUCT_FLAGS)
+        .set p_addr, p_addr + 4096
+    .endr
+
+/* map 1MB -> 3GB */
+.align 1024
+higher_half_page_table:
+    .set p_addr, 0x00100000
+    .rept 1024
+        .long p_addr | PAGE_STRUCT_FLAGS
+        .set p_addr, p_addr + 4096
+    .endr
+
+/* entry point of kernel */
+.global _start
+.type _start, @function
+/* set up paging */
+_start:
+    movl $page_directory, %eax
+    orl $PAGE_STRUCT_FLAGS, (%eax)
+    
+    movl $identity_page_table, %ecx
+    orl $PAGE_STRUCT_FLAGS, %ecx
+    movl %ecx, (%eax)
+    
+    movl $higher_half_page_table, %ecx
+    orl $PAGE_STRUCT_FLAGS, %ecx
+    orl %ecx, 3072(%eax)
+    
+    /* load the page directory */
+    movl %eax, %cr3
+
+    /* enable paging */
+    movl %cr0, %eax
+    orl $0b10000000000000000000000000000000, %eax
+    movl %eax, %cr0
+
+    /* jump to higher half */
+    movl _higher_half, %eax
+    jmp *%eax
 
 /*
     create a "stack" -> just static memory
@@ -30,11 +85,8 @@
         .skip 16384 // 16 KiB
     stack_top:
 
-/* entry point of kernel */
 .section .text
-.global _start
-.type _start, @function
-_start:
+_higher_half:
     /* 
     set up the "stack" with the stack pointer and 
     base pointer that will be used by C programs

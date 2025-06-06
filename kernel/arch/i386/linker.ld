@@ -3,28 +3,26 @@ ENTRY(_start)
 
 /* where to put the different sections */
 SECTIONS {
-    /* kernel starts @ 1M */
-    . = 1M;
+    /* kernel starts @ GB */
+    . = 0xC0000000;
     _begin = .;
 
-    /* place the multiboot header at the beginning of the executeable */
-    .text BLOCK(4K) : ALIGN(4K) {
-        *(.multiboot)
+    .text ALIGN(4K) : AT(ADDR(.text)-0xC0000000) {
         *(.text)
     }
 
     /* readonly data */
-    .rodata BLOCK(4K) : ALIGN(4K) {
+    .rodata ALIGN(4K) : AT(ADDR(.rodata)-0xC0000000) {
         *(.rodata)
     }
 
     /* initialized data */
-    .data BLOCK(4K) : ALIGN(4K) {
+    .data ALIGN(4K) : AT(ADDR(.data)-0xC0000000) {
         *(.data)
     }
 
     /* unintialized data + stack */
-    .bss BLOCK(4K) : ALIGN(4K) {
+    .bss ALIGN(4K) : AT(ADDR(.bss)-0xC0000000) {
         *(COMMON)
         *(.bss)
     }
