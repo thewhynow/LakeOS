@@ -11,7 +11,7 @@ static const size_t TERMINAL_HEIGHT = 25LU;
 
 static size_t terminal_row =     0;
 static size_t terminal_col =     0;
-static uint16_t* terminal_buff = (uint16_t*) 0xB8000 + 0xC0000000;
+static uint16_t* terminal_buff = (uint16_t*) 0xC00B8000;
 static uint8_t terminal_color;
 
 void terminal_init(){

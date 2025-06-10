@@ -12,6 +12,8 @@ void IRQ_time_handler(){
     PIC_end_of_int(TIMER_IRQ);
     static unsigned long sys_uptime;
     ++sys_uptime;
+
+    // printf("time: %i\n", sys_uptime);
 }
 
 void PIT_enable(){

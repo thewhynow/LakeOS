@@ -10,27 +10,28 @@
     declare multiboot header - makes program the kernel
     bootloader searches for this signature in the first 8KiB
     of the kernel file, aligned to 4 bytes
-
-    signature in own section so header can be forced to be within first 8KiB of file
 */
 
-.section .text
+.section .multiboot
     .align 4
     .long MAGIC
     .long FLAGS
     .long CHECKSUM
 
+
 .set PAGE_STRUCT_PRESENT,   0b00000000000000000000000000000001
 .set PAGE_STRUCT_WRITEABLE, 0b00000000000000000000000000000010
 .set PAGE_STRUCT_FLAGS,     0b00000000000000000000000000000011
 
-.align 1024
+.section .data
+
+.align 4096
 .global page_directory
 page_directory:
     .skip 4096
 
 /* identity map first 4MB */
-.align 1024
+.align 4096
 identity_page_table:
     .set p_addr, 0
     .rept 1024
@@ -38,32 +39,34 @@ identity_page_table:
         .set p_addr, p_addr + 4096
     .endr
 
-/* map 1MB -> 3GB */
-.align 1024
+/* map 0MB -> 3GB */
+.align 4096
 higher_half_page_table:
-    .set p_addr, 0x00100000
+    .set p_addr, 0
     .rept 1024
-        .long p_addr | PAGE_STRUCT_FLAGS
+        .long p_addr | (PAGE_STRUCT_FLAGS)
         .set p_addr, p_addr + 4096
     .endr
 
+.section .text
 /* entry point of kernel */
 .global _start
 .type _start, @function
 /* set up paging */
 _start:
     movl $page_directory, %eax
-    orl $PAGE_STRUCT_FLAGS, (%eax)
+    subl $0xC0000000, %eax
     
     movl $identity_page_table, %ecx
+    subl $0xC0000000, %ecx
     orl $PAGE_STRUCT_FLAGS, %ecx
     movl %ecx, (%eax)
     
     movl $higher_half_page_table, %ecx
+    subl $0xC0000000, %ecx
     orl $PAGE_STRUCT_FLAGS, %ecx
-    orl %ecx, 3072(%eax)
-    
-    /* load the page directory */
+    movl %ecx, 3072(%eax)
+
     movl %eax, %cr3
 
     /* enable paging */
@@ -72,7 +75,7 @@ _start:
     movl %eax, %cr0
 
     /* jump to higher half */
-    movl _higher_half, %eax
+    movl $_higher_half, %eax
     jmp *%eax
 
 /*

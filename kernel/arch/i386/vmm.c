@@ -56,11 +56,17 @@ static pd_entry_t *get_pde_from_vaddr(pdirectory_t *pdirectory, vaddr_t vaddr){
     return &pdirectory->entries[PAGE_DIR_INDEX(vaddr)];
 }
 
-extern pdirectory_t *page_directory;
+extern pdirectory_t page_directory;
 
-static void switch_pd(pdirectory_t *new){
-    page_directory = new;
-    asm volatile("movl %0, %%cr3" :: "r"(new) : "memory");
+static void flush_pd(){
+/* to shut apple intellisense up */
+#ifndef __APPLE__
+    asm volatile (
+        "movl %%cr3, %%eax\n"
+        "movl %%eax, %%cr3\n"
+        ::: "eax"
+    );
+#endif
 }
 
 static void flush_tlb_entry(vaddr_t vaddr){
@@ -72,14 +78,14 @@ static void flush_tlb_entry(vaddr_t vaddr){
 }
 
 void vmm_map_page(void *paddr, void *vaddr){
-    pd_entry_t *pdir_entry = &page_directory->entries[PAGE_DIR_INDEX((uint32_t)vaddr)];
+    pd_entry_t *pdir_entry = &page_directory.entries[PAGE_DIR_INDEX((uint32_t)vaddr)];
 
     ptable_t *ptable;
     /* page table not present, allocate */
     if (!ENTRY_GET_ATTRIBUTE(*pdir_entry, PAGE_STRUCT_ENTRY_PRESENT)){
         ptable = alloc_page();
         memset(ptable, 0, ENTRIES_PER_STRUCT * 4);
-        
+
         /* set new page table */
         ENTRY_ADD_ATTRIBUTE(*pdir_entry, PAGE_STRUCT_ENTRY_PRESENT);
         ENTRY_ADD_ATTRIBUTE(*pdir_entry, PAGE_STRUCT_ENTRY_WRITEABLE);
@@ -87,7 +93,7 @@ void vmm_map_page(void *paddr, void *vaddr){
     } 
     else
         ptable = (void*) PTE_FROM_PDIR(pdir_entry);
-    
+
     /* get the page table entry */
     pt_entry_t *pte = &ptable->entries[PAGE_TABLE_INDEX((uint32_t)vaddr)];
 
@@ -97,61 +103,26 @@ void vmm_map_page(void *paddr, void *vaddr){
 }
 
 void VMM_init() {
-    /* default pt */
-    ptable_t *table1 = alloc_page();
-    /* used for identity mapping */
-    ptable_t *table2 = alloc_page();
-
-    memset(table1, 0, sizeof(ptable_t));
-    memset(table2, 0, sizeof(ptable_t));
-
-    /* linker symbols to denote start and end of kernel */
-    extern uint8_t _begin, _end; 
-    size_t kernel_size = &_end - &_begin;
-
-    /* identity map the first 4MB */
-    for (int i = 0; i < 1024; ++i){
-        pt_entry_t *entry = &table2->entries[i];
-        ENTRY_ADD_ATTRIBUTE(*entry, PAGE_STRUCT_ENTRY_PRESENT);
-        ENTRY_SET_FRAME(*entry, i * 4096);
+    
+    extern uint8_t *bitmap;
+    extern size_t  bitmap_len;
+    
+    size_t bitmap_size = bitmap_len / 8 + !!(bitmap_len % 8);
+    
+    size_t num_pages = bitmap_size / 4096 + !!(bitmap_size % 4096);
+    
+    if ((size_t)bitmap % 4096) {
+        printf("Bitmap not page-aligned! im too lazy to fix this 'bug'\n");
+        for (;;);
     }
+    
+    for (size_t i = 0; i < num_pages; ++i)
+        vmm_map_page(bitmap, bitmap + 0xC0000000 + i * 4096);
+    
+    /* just invalidate the identity-mapping page table */
+    page_directory.entries[PAGE_DIR_INDEX(0x0)] = 0;
 
-    /* map physical 1MB to virtual 3GB */
-    for (int i = 0, paddr = 0x00100000; i < 1024; ++i, paddr += 4096){
-        pt_entry_t *entry = &table1->entries[i];
-        ENTRY_ADD_ATTRIBUTE(*entry, PAGE_STRUCT_ENTRY_PRESENT);
-        ENTRY_SET_FRAME(*entry, paddr);
-    }
-
-    /* default dt */
-    pdirectory_t *pdir = alloc_page();
-    memset(pdir, 0, sizeof *pdir);
-
-    /* 1MB -> 3GB Page Table */
-    pd_entry_t *pd_entry = &pdir->entries[(((0xC0000000) >> 22) & 0x3FF)];
-    ENTRY_ADD_ATTRIBUTE(*pd_entry, PAGE_STRUCT_ENTRY_PRESENT);
-    ENTRY_ADD_ATTRIBUTE(*pd_entry, PAGE_STRUCT_ENTRY_WRITEABLE);
-    ENTRY_SET_FRAME(*pd_entry, table1);
-
-    /* 0-4MB -> 0-4MB Page Table */
-    pd_entry = &pdir->entries[PAGE_DIR_INDEX(0x0)];
-    ENTRY_ADD_ATTRIBUTE(*pd_entry, PAGE_STRUCT_ENTRY_PRESENT);
-    ENTRY_ADD_ATTRIBUTE(*pd_entry, PAGE_STRUCT_ENTRY_WRITEABLE);
-    ENTRY_SET_FRAME(*pd_entry, table2);
-
-    switch_pd(pdir);
-
-    asm volatile (
-        "movl %%cr0, %%eax\n"
-        "orl $0b10000000000000000000000000000000, %%eax\n"
-        "movl %%eax, %%cr0\n"
-        "movl $1f, %%eax\n"
-        "subl $0x00100000, %%eax\n"
-        "addl $0xC0000000, %%eax\n"
-        "jmpl *%%eax\n"
-        "1:\n"
-    ::: "eax");
-
-    pdir->entries[PAGE_DIR_INDEX(0x0)] = 0;
-    switch_pd(pdir);
+    bitmap += 0xC0000000;
+    
+    flush_pd();
 }

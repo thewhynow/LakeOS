@@ -3,9 +3,14 @@ ENTRY(_start)
 
 /* where to put the different sections */
 SECTIONS {
-    /* kernel starts @ GB */
-    . = 0xC0000000;
-    _begin = .;
+    /* kernel starts @ 3GB + 1MB */
+    . = 0xC0100000;
+    
+    _begin = . - 0xC0000000;
+
+    .multiboot : {
+        KEEP(*(.multiboot))
+    }
 
     .text ALIGN(4K) : AT(ADDR(.text)-0xC0000000) {
         *(.text)
@@ -27,5 +32,5 @@ SECTIONS {
         *(.bss)
     }
 
-    _end = .;
+    _end = . - 0xC0000000;
 }
