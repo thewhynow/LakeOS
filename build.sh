@@ -77,4 +77,4 @@ else
     rm lakeos.iso
 fi
 
-# rm iso/boot/lakeos.bin
+rm iso/boot/lakeos.elf

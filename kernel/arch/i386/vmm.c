@@ -57,6 +57,7 @@ static pd_entry_t *get_pde_from_vaddr(pdirectory_t *pdirectory, vaddr_t vaddr){
 }
 
 extern pdirectory_t page_directory;
+extern ptable_t     higher_half_page_table;
 
 static void flush_pd(){
 /* to shut apple intellisense up */
@@ -80,26 +81,37 @@ static void flush_tlb_entry(vaddr_t vaddr){
 void vmm_map_page(void *paddr, void *vaddr){
     pd_entry_t *pdir_entry = &page_directory.entries[PAGE_DIR_INDEX((uint32_t)vaddr)];
 
-    ptable_t *ptable;
+    /* page table will be mapped to 0xC0000000 */
+    ptable_t *ptable = (ptable_t*) 0xC0000000;
+
+    /* used to map the page table into memory */
+    pt_entry_t *map_ptable_entry = &higher_half_page_table.entries[PAGE_TABLE_INDEX(0xC0000000)];
+
     /* page table not present, allocate */
     if (!ENTRY_GET_ATTRIBUTE(*pdir_entry, PAGE_STRUCT_ENTRY_PRESENT)){
-        ptable = alloc_page();
+        ENTRY_SET_FRAME(*map_ptable_entry, alloc_page());
+        flush_pd();
+        
         memset(ptable, 0, ENTRIES_PER_STRUCT * 4);
 
         /* set new page table */
         ENTRY_ADD_ATTRIBUTE(*pdir_entry, PAGE_STRUCT_ENTRY_PRESENT);
         ENTRY_ADD_ATTRIBUTE(*pdir_entry, PAGE_STRUCT_ENTRY_WRITEABLE);
-        ENTRY_SET_FRAME(*pdir_entry, ptable);
+        ENTRY_SET_FRAME(*pdir_entry, ENTRY_GET_ATTRIBUTE((size_t)map_ptable_entry, PAGE_STRUCT_PAGE_FRAME));
     } 
-    else
-        ptable = (void*) PTE_FROM_PDIR(pdir_entry);
-
+    else {
+        ENTRY_SET_FRAME(*map_ptable_entry, PTE_FROM_PDIR(pdir_entry));
+        flush_pd();
+    }
+    
     /* get the page table entry */
     pt_entry_t *pte = &ptable->entries[PAGE_TABLE_INDEX((uint32_t)vaddr)];
 
     /* map the page table entry */
     ENTRY_ADD_ATTRIBUTE(*pte, PAGE_STRUCT_ENTRY_PRESENT);
     ENTRY_SET_FRAME(*pte, paddr);
+
+    flush_pd();
 }
 
 void VMM_init() {
@@ -108,7 +120,6 @@ void VMM_init() {
     extern size_t  bitmap_len;
     
     size_t bitmap_size = bitmap_len / 8 + !!(bitmap_len % 8);
-    
     size_t num_pages = bitmap_size / 4096 + !!(bitmap_size % 4096);
     
     if ((size_t)bitmap % 4096) {

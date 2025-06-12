@@ -34,17 +34,17 @@ void kernel_main(){
 
     char* string;
 
-    // string = alloc_page();
-    // vmm_map_page(string, string);
+    string = alloc_page();
+    vmm_map_page(string, string);
 
-    // while (1) {
-    //     memset(string, 0, 100);
-    //     gets(string);
-    //     printf("string: %s\n", string);
+    while (1) {
+        memset(string, 0, 100);
+        gets(string);
+        printf("string: %s\n", string);
 
-    //     if (!memcmp(string, "quit", 4))
-    //         for (;;);
-    // }
+        if (!memcmp(string, "quit", 4))
+            for (;;);
+    }
 
     for (;;);
 }

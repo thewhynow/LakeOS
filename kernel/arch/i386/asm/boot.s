@@ -12,11 +12,12 @@
     of the kernel file, aligned to 4 bytes
 */
 
-.section .multiboot
-    .align 4
-    .long MAGIC
-    .long FLAGS
-    .long CHECKSUM
+// .section .multiboot
+//     .align 4
+//     multiboot_header:   
+//     .long MAGIC
+//     .long FLAGS
+//     .long CHECKSUM
 
 
 .set PAGE_STRUCT_PRESENT,   0b00000000000000000000000000000001
@@ -41,6 +42,7 @@ identity_page_table:
 
 /* map 0MB -> 3GB */
 .align 4096
+.global higher_half_page_table
 higher_half_page_table:
     .set p_addr, 0
     .rept 1024
@@ -66,6 +68,11 @@ _start:
     subl $0xC0000000, %ecx
     orl $PAGE_STRUCT_FLAGS, %ecx
     movl %ecx, 3072(%eax)
+
+    /* recursive mapping - so the pag */
+    // movl $page_directory, %ecx
+    // orl $3, %ecx
+    // movl %ecx, 4092(%eax)
 
     movl %eax, %cr3
 

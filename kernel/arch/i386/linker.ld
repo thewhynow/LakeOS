@@ -1,36 +1,36 @@
-/* designated kernel entry point */
+OUTPUT_FORMAT("elf32-i386")
 ENTRY(_start)
 
-/* where to put the different sections */
 SECTIONS {
-    /* kernel starts @ 3GB + 1MB */
     . = 0xC0100000;
     
     _begin = . - 0xC0000000;
 
-    .multiboot : {
-        KEEP(*(.multiboot))
-    }
-
-    .text ALIGN(4K) : AT(ADDR(.text)-0xC0000000) {
+    .text : AT(ADDR(.text)-0xC0000000){
+        . = ALIGN(4);
+        LONG(0x1BADB002) /* multiboot magic */
+        LONG(0x00000003) /* multiboot flags */
+        LONG(0xE4524FFB) /* multiboot checksum = -(magic + flags) */
         *(.text)
+        *(.rodata)
+        . = ALIGN(4096);
     }
 
-    /* readonly data */
-    .rodata ALIGN(4K) : AT(ADDR(.rodata)-0xC0000000) {
+    .data : AT(ADDR(.data)-0xC0000000){
+        data = .; _data = .; __data = .;
+        *(.data)
+        . = ALIGN(4096);
+    }
+
+    .rodata : AT(ADDR(.rodata)-0xC0000000){
         *(.rodata)
     }
 
-    /* initialized data */
-    .data ALIGN(4K) : AT(ADDR(.data)-0xC0000000) {
-        *(.data)
-    }
-
-    /* unintialized data + stack */
-    .bss ALIGN(4K) : AT(ADDR(.bss)-0xC0000000) {
-        *(COMMON)
+    .bss : AT(ADDR(.bss)-0xC0000000){
+        bss = .; _bss = .; __bss = .;
         *(.bss)
+        . = ALIGN(4096);
     }
 
-    _end = . - 0xC0000000;
+    _end = .;
 }
