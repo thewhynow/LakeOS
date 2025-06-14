@@ -17,7 +17,6 @@ SECTIONS {
     }
 
     .data : AT(ADDR(.data)-0xC0000000){
-        data = .; _data = .; __data = .;
         *(.data)
         . = ALIGN(4096);
     }
@@ -27,7 +26,6 @@ SECTIONS {
     }
 
     .bss : AT(ADDR(.bss)-0xC0000000){
-        bss = .; _bss = .; __bss = .;
         *(.bss)
         . = ALIGN(4096);
     }

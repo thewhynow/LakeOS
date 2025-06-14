@@ -35,7 +35,7 @@ void kernel_main(){
     char* string;
 
     string = alloc_page();
-    vmm_map_page(string, string);
+    string = vmm_map_page(string, string + 0xC0000000);
 
     while (1) {
         memset(string, 0, 100);

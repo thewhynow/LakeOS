@@ -78,19 +78,20 @@ static void flush_tlb_entry(vaddr_t vaddr){
     :: "r"(vaddr) : "memory");
 }
 
-void vmm_map_page(void *paddr, void *vaddr){
+void *vmm_map_page(void *paddr, void *vaddr){
     pd_entry_t *pdir_entry = &page_directory.entries[PAGE_DIR_INDEX((uint32_t)vaddr)];
 
-    /* page table will be mapped to 0xC0000000 */
-    ptable_t *ptable = (ptable_t*) 0xC0000000;
+    /* page table will be mapped to 0xC03FF000 */
+    ptable_t *ptable = (ptable_t*) 0xC03FF000;
 
     /* used to map the page table into memory */
-    pt_entry_t *map_ptable_entry = &higher_half_page_table.entries[PAGE_TABLE_INDEX(0xC0000000)];
+    pt_entry_t *map_ptable_entry = &higher_half_page_table.entries[PAGE_TABLE_INDEX(0xC03FF000)];
 
     /* page table not present, allocate */
     if (!ENTRY_GET_ATTRIBUTE(*pdir_entry, PAGE_STRUCT_ENTRY_PRESENT)){
+        /* map the page table so it can be used */
         ENTRY_SET_FRAME(*map_ptable_entry, alloc_page());
-        flush_pd();
+        flush_tlb_entry(0xC03FF000);
         
         memset(ptable, 0, ENTRIES_PER_STRUCT * 4);
 
@@ -100,18 +101,22 @@ void vmm_map_page(void *paddr, void *vaddr){
         ENTRY_SET_FRAME(*pdir_entry, ENTRY_GET_ATTRIBUTE((size_t)map_ptable_entry, PAGE_STRUCT_PAGE_FRAME));
     } 
     else {
+        /* map the page table so it can be used */
         ENTRY_SET_FRAME(*map_ptable_entry, PTE_FROM_PDIR(pdir_entry));
-        flush_pd();
+        flush_tlb_entry(0xC03FF000);
     }
     
     /* get the page table entry */
     pt_entry_t *pte = &ptable->entries[PAGE_TABLE_INDEX((uint32_t)vaddr)];
-
+    
     /* map the page table entry */
     ENTRY_ADD_ATTRIBUTE(*pte, PAGE_STRUCT_ENTRY_PRESENT);
+    ENTRY_ADD_ATTRIBUTE(*pte, PAGE_STRUCT_ENTRY_WRITEABLE);
     ENTRY_SET_FRAME(*pte, paddr);
 
-    flush_pd();
+    flush_tlb_entry((vaddr_t) vaddr);
+
+    return vaddr;
 }
 
 void VMM_init() {

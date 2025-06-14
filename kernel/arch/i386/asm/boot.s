@@ -12,13 +12,6 @@
     of the kernel file, aligned to 4 bytes
 */
 
-// .section .multiboot
-//     .align 4
-//     multiboot_header:   
-//     .long MAGIC
-//     .long FLAGS
-//     .long CHECKSUM
-
 
 .set PAGE_STRUCT_PRESENT,   0b00000000000000000000000000000001
 .set PAGE_STRUCT_WRITEABLE, 0b00000000000000000000000000000010

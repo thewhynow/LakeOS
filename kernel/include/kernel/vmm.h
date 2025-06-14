@@ -90,7 +90,7 @@ extern "C" {
 
 void VMM_init();
 
-void vmm_map_page(void *paddr, void *vaddr);
+void *vmm_map_page(void *paddr, void *vaddr);
 
 #ifdef __cplusplus
 }
