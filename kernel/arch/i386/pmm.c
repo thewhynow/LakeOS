@@ -57,8 +57,6 @@ void PMM_init() {
 
     size_t bitmap_size = div_round_up(bitmap_len, 8);
 
-    size_t kernel_size = &_end - &_begin;
-
     /* look for a region that can fit the bitmap */
     for (size_t i = 0; i < num_regions; ++i)
         if (regions[i].type == MULTIBOOT_MEMORY_AVAILABLE && regions[i].length_low >= bitmap_size){

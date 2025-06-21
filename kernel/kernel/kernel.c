@@ -8,6 +8,7 @@
 #include "../include/kernel/pit.h"
 #include "../include/kernel/pmm.h"
 #include "../include/kernel/vmm.h"
+#include "../include/kernel/fdc.h"
 
 void kernel_main(){
     terminal_init();
@@ -29,8 +30,23 @@ void kernel_main(){
     printf("Loading VMM...");
     VMM_init();
     printf("VMM Loaded!\n");
+    printf("Loading FDC...");
+    // FDC_init();
+    printf("FDC Loaded!\n");
 
     printf("Welcome to lakeOS!\n");
+
+    printf("Dumping Sector 0...\n");
+
+    uint8_t *sector = FDC_read_sector(0);
+
+    if (sector) {
+        for (int i = 0; i < 512; i += 4)
+            if (sector[i])
+                printf("%u", sector[i]);
+    } 
+    else 
+        printf("fuck!\n");
 
     char* string;
 

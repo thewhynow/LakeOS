@@ -1,8 +1,9 @@
 #include "../../include/kernel/irq.h"
 
 IRQ_handler_t IRQ_handlers[16] = {
-    IRQ_time_handler,
-    IRQ_keyboard_handler,
+    [0] = IRQ_time_handler,
+    [1] = IRQ_keyboard_handler,
+    [6] = IRQ_FDC_handler,
 };
 
 void IRQ_handler(registers_t* regs){

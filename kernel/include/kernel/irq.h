@@ -8,6 +8,7 @@
 #include "tty.h"
 #include "pit.h"
 #include "ps2.h"
+#include "fdc.h"
 
 typedef void (*IRQ_handler_t)();
 

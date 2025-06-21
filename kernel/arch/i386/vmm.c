@@ -93,7 +93,7 @@ void *vmm_map_page(void *paddr, void *vaddr){
         ENTRY_SET_FRAME(*map_ptable_entry, alloc_page());
         flush_tlb_entry(0xC03FF000);
         
-        memset(ptable, 0, ENTRIES_PER_STRUCT * 4);
+        memset(ptable, 0, ENTRIES_PER_STRUCT * sizeof(pt_entry_t));
 
         /* set new page table */
         ENTRY_ADD_ATTRIBUTE(*pdir_entry, PAGE_STRUCT_ENTRY_PRESENT);

@@ -62,11 +62,6 @@ _start:
     orl $PAGE_STRUCT_FLAGS, %ecx
     movl %ecx, 3072(%eax)
 
-    /* recursive mapping - so the pag */
-    // movl $page_directory, %ecx
-    // orl $3, %ecx
-    // movl %ecx, 4092(%eax)
-
     movl %eax, %cr3
 
     /* enable paging */

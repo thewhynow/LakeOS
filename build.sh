@@ -14,6 +14,7 @@ x_flags="-std=c++98 -ffreestanding -Wall -Wextra -D_KERNEL_LIBC -nostdlib"
 c_flags="-std=gnu99 -ffreestanding -Wall -Wextra -D_KERNEL_LIBC -nostdlib"
 s_flags=""
 q_flags=" -m 512"
+q_flopy=" -fda floppy.img"
 
 if [[ "$1" == "debug" ]]; then
     c_flags+=" -g"
@@ -25,8 +26,6 @@ fi
 if [[ "$1" == "log" || "$2" == "log" ]]; then
     q_flags+=" -d int -D qemu.log"
 fi
-
-
 
 $compiler_path -c kernel/kernel/kernel.c        -o kernel.o    $c_flags
 $compiler_path -c kernel/arch/i386/tty.c        -o tty.o       $c_flags
@@ -41,6 +40,8 @@ $compiler_path -c kernel/arch/i386/ps2.c        -o ps2.o       $c_flags
 $compiler_path -c kernel/arch/i386/multiboot.c  -o multiboot.o $c_flags
 $compiler_path -c kernel/arch/i386/pmm.c        -o pmm.o       $c_flags
 $compiler_path -c kernel/arch/i386/vmm.c        -o vmm.o       $c_flags
+$compiler_path -c kernel/arch/i386/dma.c        -o dma.o       $c_flags
+$compiler_path -c kernel/arch/i386/fdc.c        -o fdc.o       $c_flags
 
 $compiler_path -c libc/stdio/printf.c           -o printf.o    $c_flags
 $compiler_path -c libc/stdio/putchar.c          -o putchar.o   $c_flags
@@ -70,10 +71,11 @@ $compiler_path -T kernel/arch/i386/linker.ld -o iso/boot/lakeos.elf $c_flags -lg
 rm *.o
 
 if [[ "$1" == "debug" ]]; then
-    qemu-system-i386 -kernel iso/boot/lakeos.elf $q_flags
+    echo $q_flags $q_flopy
+    qemu-system-i386 -kernel iso/boot/lakeos.elf $q_flags $q_flopy
 else
     $grub_iso_path -o lakeos.iso iso
-    qemu-system-i386 -cdrom lakeos.iso $q_flags
+    qemu-system-i386 -cdrom lakeos.iso $q_flags $q_flopy
     rm lakeos.iso
 fi
 
