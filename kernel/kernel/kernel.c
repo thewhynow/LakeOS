@@ -31,7 +31,7 @@ void kernel_main(){
     VMM_init();
     printf("VMM Loaded!\n");
     printf("Loading FDC...");
-    // FDC_init();
+    FDC_init();
     printf("FDC Loaded!\n");
 
     printf("Welcome to lakeOS!\n");
@@ -40,13 +40,9 @@ void kernel_main(){
 
     uint8_t *sector = FDC_read_sector(0);
 
-    if (sector) {
-        for (int i = 0; i < 512; i += 4)
-            if (sector[i])
-                printf("%u", sector[i]);
-    } 
-    else 
-        printf("fuck!\n");
+    for (int i = 0; i < 1024; i += 1)
+        if (sector[i])
+            printf("%c", sector[i]);
 
     char* string;
 

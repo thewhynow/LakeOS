@@ -70,13 +70,8 @@ $compiler_path -T kernel/arch/i386/linker.ld -o iso/boot/lakeos.elf $c_flags -lg
 
 rm *.o
 
-if [[ "$1" == "debug" ]]; then
-    echo $q_flags $q_flopy
-    qemu-system-i386 -kernel iso/boot/lakeos.elf $q_flags $q_flopy
-else
-    $grub_iso_path -o lakeos.iso iso
-    qemu-system-i386 -cdrom lakeos.iso $q_flags $q_flopy
-    rm lakeos.iso
-fi
+$grub_iso_path -o lakeos.iso iso
+qemu-system-i386 -cdrom lakeos.iso $q_flags $q_flopy
 
+rm lakeos.iso
 rm iso/boot/lakeos.elf

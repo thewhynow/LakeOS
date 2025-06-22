@@ -14,9 +14,9 @@ uint16_t buff_len;
 void FDC_CMD_read_sector(uint8_t head, uint8_t track, uint8_t sector);
 
 void FDC_lba_to_chs(uint32_t lba, uint8_t *head, uint8_t *track, uint8_t *sector){
-    *head   = (lba % (SECTORS_PER_TRACK * 2));
-    *track  = (lba / (SECTORS_PER_TRACK * 2));
-    *sector = (lba % SECTORS_PER_TRACK + 1);
+    *head   = (lba / SECTORS_PER_TRACK) % 2;
+    *track  = lba / (SECTORS_PER_TRACK * 2);
+    *sector = lba % SECTORS_PER_TRACK + 1;
 }
 
 void FDC_enable(){
@@ -53,7 +53,7 @@ void IRQ_FDC_handler(){
 void FDC_irq_wait(){
     while (!floppy_irq_fired);
 
-    floppy_irq_fired = 0;
+    floppy_irq_fired = false;
 }
 
 void FDC_DMA_init(){
@@ -80,7 +80,7 @@ void FDC_init(){
     current_drive = 0;
 
     /* identity map the buffer so we can access it */
-    vmm_map_page(buff, buff);
+    vmm_map_page(buff, buff + 0xC0000000);
 
     PIC_unmask(FLOPPY_IRQ);
 
@@ -134,7 +134,7 @@ void *FDC_read_sector(uint32_t lba){
 
     FDC_stop_motor();
 
-    return (void*) buff_paddr;
+    return (void*) buff_paddr + 0xC0000000;
 }
 
 void FDC_CMD_drive_data(
