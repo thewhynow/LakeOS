@@ -79,7 +79,7 @@ void FDC_init(){
     buff_len = 4096;
     current_drive = 0;
 
-    /* identity map the buffer so we can access it */
+    /* higher-half map the buffer so we can access it */
     vmm_map_page(buff, buff + 0xC0000000);
 
     PIC_unmask(FLOPPY_IRQ);
@@ -112,10 +112,10 @@ void FDC_CMD_read_sector(uint8_t head, uint8_t track, uint8_t sector){
     FDC_write_cmd(buff_len);
     
     FDC_irq_wait();
-    
+
     for (int i = 0; i < 7; ++i)
         FDC_read_data();
-    
+
     uint8_t garbage;
     FDC_check_int(&garbage, &garbage);
 }
