@@ -20,11 +20,11 @@ void FDC_lba_to_chs(uint32_t lba, uint8_t *head, uint8_t *track, uint8_t *sector
 }
 
 void FDC_enable(){
-    port_write_byte(FDC_DOR, 0);
+    port_write_byte(FDC_DOR, FDC_DOR_MASK_RESET | FDC_DOR_MASK_DMA);
 }
 
 void FDC_disable(){
-    port_write_byte(FDC_DOR, FDC_DOR_MASK_RESET | FDC_DOR_MASK_DMA);
+    port_write_byte(FDC_DOR, 0);
 }
 
 void FDC_reset(){
@@ -33,7 +33,7 @@ void FDC_reset(){
     FDC_disable(); FDC_enable();
     FDC_irq_wait();
 
-    for (int i = 0; i < 4; ++i)
+    for (int i = 0; i < 3; ++i)
         FDC_check_int(&st0, &cyl);
     
     /* transfer speed 500 KBPS */
@@ -93,7 +93,6 @@ void FDC_init(){
 
 void FDC_CMD_read_sector(uint8_t head, uint8_t track, uint8_t sector){
     FDC_DMA_init();
-    
     DMA_SET_READ(FLOPPY_CHANNEL);
     
     FDC_write_cmd(FDC_CMD_READ_SECT | FDC_CMD_EXT_MULTITRACK | FDC_CMD_EXT_SKIP | FDC_CMD_EXT_DENSITY);
@@ -137,9 +136,7 @@ void *FDC_read_sector(uint32_t lba){
     return (void*) buff_paddr + 0xC0000000;
 }
 
-void FDC_CMD_drive_data(
-    uint32_t stepr, uint32_t loadt, uint32_t unloadt, bool dma
-){
+void FDC_CMD_drive_data(uint32_t stepr, uint32_t loadt, uint32_t unloadt, bool dma){
     uint32_t data = 0;
 
     FDC_write_cmd(FDC_CMD_SPECIFY);
@@ -147,7 +144,7 @@ void FDC_CMD_drive_data(
     data = ((stepr & 0xF) << 4) | (unloadt & 0xF);
     FDC_write_cmd(data);
 
-    data = (loadt << 1) | !!dma;
+    data = (loadt << 1) | !dma;
     FDC_write_cmd(data);
 }
 
@@ -219,8 +216,10 @@ void FDC_check_int(uint8_t *st0, uint8_t *cylinder){
     *st0 = FDC_read_data();
 
     /* error code, doesnt matter */
-    if (*st0 == 0x80)
-        return;
+    if (*st0 == 0x80){
+        printf("panic: st0==0x80\n");
+        for (;;);
+    }
 
     *cylinder = FDC_read_data();
 }

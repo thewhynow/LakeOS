@@ -122,7 +122,7 @@ typedef enum {
 	DMA_PAGE_CHAN5 = 0x8B,
 } DMA_PAGE_REG;
 
-void DMA_set_address(uint8_t channel, uint16_t addr);
+void DMA_set_address(uint8_t channel, uint32_t addr);
 void DMA_set_count  (uint8_t channel, uint16_t count);
 void DMA_set_page   (uint8_t channel, uint8_t page);
 void DMA_set_mask   (uint8_t channel, bool mask);
@@ -133,10 +133,10 @@ void DMA_reset();
 void DMA_unmask_all();
 
 #define DMA_SET_READ(channel) \
-    DMA_set_mode(channel, DMA_MODE_READ_TRANSFER | DMA_MODE_TRANSFER_SINGLE | DMA_MODE_MASK_AUTO);
+    DMA_set_mode(channel, DMA_MODE_READ_TRANSFER | DMA_MODE_TRANSFER_SINGLE)
 
 #define DMA_SET_WRITE(channel) \
-    DMA_set_mode(channel, DMA_MODE_WRITE_TRANSFER | DMA_MODE_TRANSFER_SINGLE | DMA_MODE_MASK_AUTO);
+    DMA_set_mode(channel, DMA_MODE_WRITE_TRANSFER | DMA_MODE_TRANSFER_SINGLE)
 
 
 #endif

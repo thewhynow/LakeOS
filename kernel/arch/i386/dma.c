@@ -1,7 +1,7 @@
 #include "../../include/kernel/dma.h"
 #include "../../include/kernel/io.h"
 
-void DMA_set_address(uint8_t channel, uint16_t addr){
+void DMA_set_address(uint8_t channel, uint32_t addr){
     uint16_t port = 0;
 
     switch (channel){
@@ -16,8 +16,16 @@ void DMA_set_address(uint8_t channel, uint16_t addr){
         default: return;
     }
 
-    port_write_byte(port, addr & 0xFF); /* low byte */
-    port_write_byte(port, addr >> 8);   /* high byte */
+    union {
+        uint8_t bytes[4];
+        uint32_t addr;
+    } a = {
+        .addr = addr
+    };
+
+    port_write_byte(port, a.bytes[0]); /* 0 byte */
+    port_write_byte(port, a.bytes[1]); /* 1 byte */
+    // port_write_byte(port, a.bytes[2]); /* 2 byte */
 }
 
 void DMA_set_count(uint8_t channel, uint16_t count){
@@ -35,8 +43,15 @@ void DMA_set_count(uint8_t channel, uint16_t count){
         default: return;
     }
 
-    port_write_byte(port, count & 0xFF); /* low byte */
-    port_write_byte(port, count >> 8);   /* high byte */
+    union {
+        uint8_t bytes[4];
+        uint32_t count;
+    } c = {
+        .count = count
+    };
+
+    port_write_byte(port, c.bytes[0]); /* low byte */
+    port_write_byte(port, c.bytes[1]);   /* high byte */
 }
 
 void DMA_set_page(uint8_t channel, uint8_t page){
@@ -74,7 +89,7 @@ void DMA_set_mask(uint8_t channel, bool mask){
 
 void DMA_set_mode(uint8_t channel, uint8_t mode){
     uint8_t dma = !(channel < 4);
-    uint8_t indiv_channel = channel - 4 * (dma < 4);
+    uint8_t indiv_channel = channel - 4 * dma;
 
     DMA_set_mask(channel, 1);
 
@@ -89,14 +104,14 @@ void DMA_set_mode(uint8_t channel, uint8_t mode){
 void DMA_reset_flipflop(uint8_t dma){
     port_write_byte(
         dma ? DMA1_CLEARBYTE_FLIPFLOP_REG : DMA0_CLEARBYTE_FLIPFLOP_REG,
-        0x0 /* doesnt matter what is written */
+        0xFF /* doesnt matter what is written */
     );
 }
 
 void DMA_reset(){
-    port_write_byte(DMA0_TEMP_REG, 0x0);
+    port_write_byte(DMA0_TEMP_REG, 0xFF);
 }
 
 void DMA_unmask_all(){
-    port_write_byte(DMA1_UNMASK_ALL_REG, 0x0);
+    port_write_byte(DMA1_UNMASK_ALL_REG, 0xFF);
 }

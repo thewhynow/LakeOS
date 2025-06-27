@@ -41,8 +41,7 @@ void kernel_main(){
     uint8_t *sector = FDC_read_sector(0);
 
     for (int i = 0; i < 1024; i += 1)
-        if (sector[i])
-            printf("%c", sector[i]);
+        printf("%c", sector[i]);
 
     char* string;
 

@@ -18,9 +18,7 @@ void FDC_stop_motor();
 void FDC_disable();
 void FDC_enable();
 void FDC_irq_wait();
-void FDC_CMD_drive_data(
-    uint32_t stepr, uint32_t loadt, uint32_t unloadt, bool dma
-);
+void FDC_CMD_drive_data(uint32_t stepr, uint32_t loadt, uint32_t unloadt, bool dma);
 int FDC_CMD_callibrate(uint8_t drive);
 int FDC_CMD_seek(uint8_t cyl, uint8_t head);
 void FDC_init();
@@ -51,8 +49,8 @@ void *FDC_read_sector(uint32_t lba);
  *  [3] = FDD 3
  *  [4] = FDC Busy (0 = not busy, 1 = busy)
  *  [5] = FDC !(DMA Mode) (0 = DMA, 1 = IRQ)
- *  [6] = DIO (0 = FDC expecting data, 1 = FDC has data)
- *  [7] = MQR (0 = Data Register not ready, 1 = Data Register ready)
+ *  [6] = DIO (0 = expects read, 1 = expects write)
+ *  [7] = MQR (0 = FIFO not ready, 1 = FIFO ready for data write/read)
  * 
  * CONFIGURATION CONTROL REGISTER (CCR)
  *  [0:2] = Data Rate Select
@@ -211,4 +209,6 @@ typedef enum {
 	FDC_CMD_DTL_512  = 2,
 	FDC_CMD_DTL_1024 = 4
 } FDC_COMMAND_DTL;
+
+
 #endif
