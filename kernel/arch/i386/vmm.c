@@ -98,14 +98,14 @@ void *vmm_map_page(void *paddr, void *vaddr){
         /* set new page table */
         ENTRY_ADD_ATTRIBUTE(*pdir_entry, PAGE_STRUCT_ENTRY_PRESENT);
         ENTRY_ADD_ATTRIBUTE(*pdir_entry, PAGE_STRUCT_ENTRY_WRITEABLE);
-        ENTRY_SET_FRAME(*pdir_entry, ENTRY_GET_ATTRIBUTE((size_t)map_ptable_entry, PAGE_STRUCT_PAGE_FRAME));
+        ENTRY_SET_FRAME(*pdir_entry, ENTRY_GET_ATTRIBUTE(*map_ptable_entry, PAGE_STRUCT_PAGE_FRAME));
     } 
     else {
         /* map the page table so it can be used */
         ENTRY_SET_FRAME(*map_ptable_entry, PTE_FROM_PDIR(pdir_entry));
         flush_tlb_entry(0xC03FF000);
     }
-    
+
     /* get the page table entry */
     pt_entry_t *pte = &ptable->entries[PAGE_TABLE_INDEX((uint32_t)vaddr)];
     

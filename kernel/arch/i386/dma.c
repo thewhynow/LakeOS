@@ -1,7 +1,7 @@
 #include "../../include/kernel/dma.h"
 #include "../../include/kernel/io.h"
 
-void DMA_set_address(uint8_t channel, uint32_t addr){
+void DMA_set_full_address(uint8_t channel, uint32_t addr){
     uint16_t port = 0;
 
     switch (channel){
@@ -25,7 +25,7 @@ void DMA_set_address(uint8_t channel, uint32_t addr){
 
     port_write_byte(port, a.bytes[0]); /* 0 byte */
     port_write_byte(port, a.bytes[1]); /* 1 byte */
-    // port_write_byte(port, a.bytes[2]); /* 2 byte */
+    DMA_set_page(channel, a.bytes[2]); /* 2 byte */
 }
 
 void DMA_set_count(uint8_t channel, uint16_t count){
@@ -44,14 +44,14 @@ void DMA_set_count(uint8_t channel, uint16_t count){
     }
 
     union {
-        uint8_t bytes[4];
-        uint32_t count;
+        uint8_t bytes[2];
+        uint16_t count;
     } c = {
         .count = count
     };
 
     port_write_byte(port, c.bytes[0]); /* low byte */
-    port_write_byte(port, c.bytes[1]);   /* high byte */
+    port_write_byte(port, c.bytes[1]); /* high byte */
 }
 
 void DMA_set_page(uint8_t channel, uint8_t page){
@@ -75,9 +75,9 @@ void DMA_set_page(uint8_t channel, uint8_t page){
 void DMA_set_mask(uint8_t channel, bool mask){
     if (mask) {
         if (channel <= 4)
-            port_write_byte(DMA0_CHANMASK_REG, (1 << (channel - 1)));
+            port_write_byte(DMA0_CHANMASK_REG, 0b100 | channel);
         else
-            port_write_byte(DMA1_CHANMASK_REG, (1 << (channel - 5)));
+            port_write_byte(DMA1_CHANMASK_REG, 0b100 | (channel - 5));
         }
     else {
             if (channel <= 4)

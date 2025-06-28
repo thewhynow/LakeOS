@@ -24,7 +24,7 @@ if [[ "$1" == "debug" ]]; then
 fi
 
 if [[ "$1" == "log" || "$2" == "log" ]]; then
-    q_flags+=" -d int -D qemu.log"
+    q_flags+=" -d int -D qemu.log -trace enable=fdc*"
 fi
 
 $compiler_path -c kernel/kernel/kernel.c        -o kernel.o    $c_flags

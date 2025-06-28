@@ -122,7 +122,7 @@ typedef enum {
 	DMA_PAGE_CHAN5 = 0x8B,
 } DMA_PAGE_REG;
 
-void DMA_set_address(uint8_t channel, uint32_t addr);
+void DMA_set_full_address(uint8_t channel, uint32_t addr);
 void DMA_set_count  (uint8_t channel, uint16_t count);
 void DMA_set_page   (uint8_t channel, uint8_t page);
 void DMA_set_mask   (uint8_t channel, bool mask);

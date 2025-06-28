@@ -8,7 +8,7 @@
 static bool floppy_irq_fired;
 
 uint8_t  current_drive;
-uint16_t buff_paddr;
+uint32_t buff_paddr;
 uint16_t buff_len;
 
 void FDC_CMD_read_sector(uint8_t head, uint8_t track, uint8_t sector);
@@ -33,13 +33,15 @@ void FDC_reset(){
     FDC_disable(); FDC_enable();
     FDC_irq_wait();
 
-    for (int i = 0; i < 3; ++i)
-        FDC_check_int(&st0, &cyl);
+    FDC_check_int(&st0, &cyl);
     
     /* transfer speed 500 KBPS */
     port_write_byte(FDC_CTRL, 0);
 
-    FDC_CMD_drive_data(3, 16, 240, true);
+    // FDC_CMD_drive_data(3, 16, 240, true);
+    FDC_write_cmd(FDC_CMD_SPECIFY);
+    FDC_write_cmd(0xDF);
+    FDC_write_cmd(0x02);
 
     FDC_CMD_callibrate(current_drive);
 }
@@ -57,30 +59,30 @@ void FDC_irq_wait(){
 }
 
 void FDC_DMA_init(){
-    DMA_reset();
     DMA_set_mask(FLOPPY_CHANNEL, true);
-    DMA_reset_flipflop(1);
-    
-    DMA_set_address(FLOPPY_CHANNEL, (uint16_t) buff_paddr);
-    DMA_reset_flipflop(1);
-    
-    DMA_set_count(FLOPPY_CHANNEL, (uint16_t) buff_len);
+
+    DMA_reset_flipflop(0);
+    DMA_set_full_address(FLOPPY_CHANNEL, buff_paddr);
+    DMA_reset_flipflop(0);
+    DMA_set_count(FLOPPY_CHANNEL, buff_len - 1);
     DMA_SET_READ(FLOPPY_CHANNEL);
 
-    DMA_unmask_all();
+    DMA_set_mask(FLOPPY_CHANNEL, false);
 }
 
 void FDC_init(){
     void *buff = alloc_page();
-    if ((0xFFFF - (unsigned long)buff) < 4096)
+    if ((0xFFFFFF - (unsigned long)buff) < 4096)
         return;
 
-    buff_paddr = (uint16_t) buff;
+    buff_paddr = (uint32_t) buff;
     buff_len = 4096;
     current_drive = 0;
 
-    /* higher-half map the buffer so we can access it */
-    vmm_map_page(buff, buff + 0xC0000000);
+    /* map the buffer so we can access it */
+    vmm_map_page(buff, buff);
+
+    memset(buff, 'A', 4095);
 
     PIC_unmask(FLOPPY_IRQ);
 
@@ -92,6 +94,11 @@ void FDC_init(){
 }
 
 void FDC_CMD_read_sector(uint8_t head, uint8_t track, uint8_t sector){
+    FDC_CMD_seek(0, 0);
+    FDC_CMD_seek(0, 1);
+    
+    FDC_start_motor(current_drive);
+    
     FDC_DMA_init();
     DMA_SET_READ(FLOPPY_CHANNEL);
     
@@ -102,21 +109,16 @@ void FDC_CMD_read_sector(uint8_t head, uint8_t track, uint8_t sector){
     FDC_write_cmd(head);
     FDC_write_cmd(sector);
     FDC_write_cmd(FDC_CMD_DTL_512);
-    FDC_write_cmd(
-        sector + 1 >= SECTORS_PER_TRACK
-        ?   SECTORS_PER_TRACK
-        :   sector + 1
-    );
+    FDC_write_cmd(SECTORS_PER_TRACK);
     FDC_write_cmd(FDC_CMD_GAP3_LENGTH_3_5);
-    FDC_write_cmd(buff_len);
+    FDC_write_cmd(0xFF);
     
     FDC_irq_wait();
 
     for (int i = 0; i < 7; ++i)
         FDC_read_data();
 
-    uint8_t garbage;
-    FDC_check_int(&garbage, &garbage);
+    FDC_stop_motor();
 }
 
 void *FDC_read_sector(uint32_t lba){
@@ -133,7 +135,7 @@ void *FDC_read_sector(uint32_t lba){
 
     FDC_stop_motor();
 
-    return (void*) buff_paddr + 0xC0000000;
+    return (void*) buff_paddr;
 }
 
 void FDC_CMD_drive_data(uint32_t stepr, uint32_t loadt, uint32_t unloadt, bool dma){
@@ -161,12 +163,16 @@ int FDC_CMD_callibrate(uint8_t drive){
 
         FDC_check_int(&st0, &cyl);
 
+        if (st0 & 0xC0)
+            printf("FDC_CMD_callibrate: status = fuck\n");
+        
         if (!cyl){
             FDC_stop_motor();
             return 0;
         }
     }
-
+    
+    printf("FDC_CMD_callibrate: status = fuck\n");
     FDC_stop_motor();
     return -1;
 }
