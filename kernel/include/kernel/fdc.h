@@ -7,7 +7,6 @@
 void IRQ_FDC_handler();
 void FDC_write_cmd(uint8_t command);
 void FDC_DMA_init();
-void FDC_write_sector();
 void FDC_read_init();
 void FDC_write_init();
 void FDC_write_cmd(uint8_t command);
@@ -18,17 +17,17 @@ void FDC_stop_motor();
 void FDC_disable();
 void FDC_enable();
 void FDC_irq_wait();
-void FDC_CMD_drive_data(uint32_t stepr, uint32_t loadt, uint32_t unloadt, bool dma);
+void FDC_CMD_specify(uint32_t stepr, uint32_t loadt, uint32_t unloadt, bool dma);
 int FDC_CMD_callibrate(uint8_t drive);
 int FDC_CMD_seek(uint8_t cyl, uint8_t head);
 void FDC_init();
-void *FDC_read_sector(uint32_t lba);
+void FDC_read_sector(void *buff, uint32_t lba);
+void FDC_write_sector(const void *buff, uint32_t lba);
+void FDC_set_drive(uint8_t drive);
 
 #define FLOPPY_CHANNEL 2
 #define FLOPPY_IRQ 6
 #define SECTORS_PER_TRACK 18
-
-
 
 /**
  * FDC REGISTERS

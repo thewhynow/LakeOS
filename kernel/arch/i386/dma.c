@@ -1,6 +1,10 @@
 #include "../../include/kernel/dma.h"
 #include "../../include/kernel/io.h"
 
+void DMA_init(){
+    port_write_byte(DMA1_COMMAND_REG, 0x0);
+}
+
 void DMA_set_full_address(uint8_t channel, uint32_t addr){
     uint16_t port = 0;
 
@@ -77,25 +81,22 @@ void DMA_set_mask(uint8_t channel, bool mask){
         if (channel <= 4)
             port_write_byte(DMA0_CHANMASK_REG, 0b100 | channel);
         else
-            port_write_byte(DMA1_CHANMASK_REG, 0b100 | (channel - 5));
+            port_write_byte(DMA1_CHANMASK_REG, 0b100 | (channel - 4));
         }
     else {
             if (channel <= 4)
                 port_write_byte(DMA0_CHANMASK_REG, channel);
             else
-                port_write_byte(DMA1_CHANMASK_REG, channel);        
+                port_write_byte(DMA1_CHANMASK_REG, channel - 4);        
     }
 }
 
 void DMA_set_mode(uint8_t channel, uint8_t mode){
-    uint8_t dma = !(channel < 4);
-    uint8_t indiv_channel = channel - 4 * dma;
-
     DMA_set_mask(channel, 1);
 
     port_write_byte (
-        dma ? DMA1_MODE_REG : DMA0_MODE_REG,
-        indiv_channel | mode
+        channel < 4 ? DMA0_MODE_REG : DMA1_MODE_REG,
+        channel - 4 * (channel >= 4) | mode
     );
 
     DMA_set_mask(channel, 0);
@@ -104,12 +105,15 @@ void DMA_set_mode(uint8_t channel, uint8_t mode){
 void DMA_reset_flipflop(uint8_t dma){
     port_write_byte(
         dma ? DMA1_CLEARBYTE_FLIPFLOP_REG : DMA0_CLEARBYTE_FLIPFLOP_REG,
-        0xFF /* doesnt matter what is written */
+        0x00
     );
 }
 
-void DMA_reset(){
-    port_write_byte(DMA0_TEMP_REG, 0xFF);
+void DMA_reset(uint8_t dma){
+    port_write_byte(
+        dma ? DMA1_MASTER_CLEAR_REG : DMA0_MASTER_CLEAR_REG,
+        0x00
+    );
 }
 
 void DMA_unmask_all(){

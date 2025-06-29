@@ -11,16 +11,21 @@ uint8_t  current_drive;
 uint32_t buff_paddr;
 uint16_t buff_len;
 
+void FDC_set_drive(uint8_t drive){
+    port_write_byte(FDC_DOR, drive | FDC_DOR_MASK_RESET | FDC_DOR_MASK_DMA);
+    current_drive = drive;
+}
+
 void FDC_CMD_read_sector(uint8_t head, uint8_t track, uint8_t sector);
 
-void FDC_lba_to_chs(uint32_t lba, uint8_t *head, uint8_t *track, uint8_t *sector){
+void FDC_lba_to_chs(uint32_t lba, uint8_t *head, uint8_t *cylinder, uint8_t *sector){
     *head   = (lba / SECTORS_PER_TRACK) % 2;
-    *track  = lba / (SECTORS_PER_TRACK * 2);
+    *cylinder  = (lba / SECTORS_PER_TRACK) / 2;
     *sector = lba % SECTORS_PER_TRACK + 1;
 }
 
 void FDC_enable(){
-    port_write_byte(FDC_DOR, FDC_DOR_MASK_RESET | FDC_DOR_MASK_DMA);
+    port_write_byte(FDC_DOR, current_drive | FDC_DOR_MASK_RESET | FDC_DOR_MASK_DMA);
 }
 
 void FDC_disable(){
@@ -33,15 +38,13 @@ void FDC_reset(){
     FDC_disable(); FDC_enable();
     FDC_irq_wait();
 
-    FDC_check_int(&st0, &cyl);
+    for (int i = 0; i < 4; ++i)
+        FDC_check_int(&st0, &cyl);
     
     /* transfer speed 500 KBPS */
     port_write_byte(FDC_CTRL, 0);
 
-    // FDC_CMD_drive_data(3, 16, 240, true);
-    FDC_write_cmd(FDC_CMD_SPECIFY);
-    FDC_write_cmd(0xDF);
-    FDC_write_cmd(0x02);
+    FDC_CMD_specify(3, 16, 240, 1);
 
     FDC_CMD_callibrate(current_drive);
 }
@@ -65,7 +68,6 @@ void FDC_DMA_init(){
     DMA_set_full_address(FLOPPY_CHANNEL, buff_paddr);
     DMA_reset_flipflop(0);
     DMA_set_count(FLOPPY_CHANNEL, buff_len - 1);
-    DMA_SET_READ(FLOPPY_CHANNEL);
 
     DMA_set_mask(FLOPPY_CHANNEL, false);
 }
@@ -85,20 +87,11 @@ void FDC_init(){
     memset(buff, 'A', 4095);
 
     PIC_unmask(FLOPPY_IRQ);
-
-    FDC_DMA_init();
-
+    FDC_set_drive(0);
     FDC_reset();
-
-    FDC_CMD_drive_data(13, 1, 0xF, true);
 }
 
-void FDC_CMD_read_sector(uint8_t head, uint8_t track, uint8_t sector){
-    FDC_CMD_seek(0, 0);
-    FDC_CMD_seek(0, 1);
-    
-    FDC_start_motor(current_drive);
-    
+void FDC_CMD_read_sector(uint8_t head, uint8_t track, uint8_t sector){    
     FDC_DMA_init();
     DMA_SET_READ(FLOPPY_CHANNEL);
     
@@ -109,7 +102,7 @@ void FDC_CMD_read_sector(uint8_t head, uint8_t track, uint8_t sector){
     FDC_write_cmd(head);
     FDC_write_cmd(sector);
     FDC_write_cmd(FDC_CMD_DTL_512);
-    FDC_write_cmd(SECTORS_PER_TRACK);
+    FDC_write_cmd(sector + 1 >= SECTORS_PER_TRACK ? SECTORS_PER_TRACK : sector + 1);
     FDC_write_cmd(FDC_CMD_GAP3_LENGTH_3_5);
     FDC_write_cmd(0xFF);
     
@@ -117,28 +110,59 @@ void FDC_CMD_read_sector(uint8_t head, uint8_t track, uint8_t sector){
 
     for (int i = 0; i < 7; ++i)
         FDC_read_data();
-
-    FDC_stop_motor();
 }
 
-void *FDC_read_sector(uint32_t lba){
-    uint8_t head, track, sector;
+void FDC_CMD_write_sector(uint8_t head, uint8_t track, uint8_t sector){
+    FDC_DMA_init();
+    DMA_SET_WRITE(FLOPPY_CHANNEL);
 
-    FDC_lba_to_chs(lba, &head, &track, &sector);
+    FDC_write_cmd(FDC_CMD_WRITE_SECT | FDC_CMD_EXT_MULTITRACK | FDC_CMD_EXT_SKIP | FDC_CMD_EXT_DENSITY);
+    FDC_write_cmd(head << 2 | current_drive);
+    FDC_write_cmd(track);
+    FDC_write_cmd(head);
+    FDC_write_cmd(sector);
+    FDC_write_cmd(FDC_CMD_DTL_512);
+    FDC_write_cmd(sector + 1 >= SECTORS_PER_TRACK ? SECTORS_PER_TRACK : sector + 1);
+    FDC_write_cmd(FDC_CMD_GAP3_LENGTH_3_5);
+    FDC_write_cmd(0xFF);
+
+    FDC_irq_wait();
+
+    for (int i = 0; i < 7; ++i)
+        FDC_read_data();
+}
+
+void FDC_read_sector(void *buff, uint32_t lba){
+    uint8_t head, cylinder, sector;
+
+    FDC_lba_to_chs(lba, &head, &cylinder, &sector);
 
     FDC_start_motor(current_drive);
 
-    if (FDC_CMD_seek(track, head) != 0)
-        return NULL;
+    FDC_CMD_seek(cylinder, head);
         
-    FDC_CMD_read_sector(head, track, sector);
+    FDC_CMD_read_sector(head, cylinder, sector);
 
     FDC_stop_motor();
 
-    return (void*) buff_paddr;
+    memcpy(buff, (void*) buff_paddr, 512);
 }
 
-void FDC_CMD_drive_data(uint32_t stepr, uint32_t loadt, uint32_t unloadt, bool dma){
+void FDC_write_sector(const void *buff, uint32_t lba){
+    memcpy((void*)buff_paddr, buff, 512);
+
+    uint8_t head, cylinder, sector;
+
+    FDC_lba_to_chs(lba, &head, &cylinder, &sector);
+
+    FDC_start_motor(current_drive);
+
+    FDC_CMD_seek(cylinder, head);
+
+    FDC_CMD_write_sector(head, cylinder, sector);
+}
+
+void FDC_CMD_specify(uint32_t stepr, uint32_t loadt, uint32_t unloadt, bool dma){
     uint32_t data = 0;
 
     FDC_write_cmd(FDC_CMD_SPECIFY);
@@ -163,10 +187,7 @@ int FDC_CMD_callibrate(uint8_t drive){
 
         FDC_check_int(&st0, &cyl);
 
-        if (st0 & 0xC0)
-            printf("FDC_CMD_callibrate: status = fuck\n");
-        
-        if (!cyl){
+        if (cyl == 0){
             FDC_stop_motor();
             return 0;
         }
@@ -193,7 +214,6 @@ int FDC_CMD_seek(uint8_t cyl, uint8_t head){
             return 0;
     }
 
-    FDC_stop_motor();
     return -1;
 }
 
@@ -206,13 +226,21 @@ void FDC_write_init(){
 }
 
 void FDC_write_cmd(uint8_t command){
-    while (!(port_read_byte(FDC_MSR) & FDC_MSR_MASK_DATA_READY));
+
+    uint8_t msr = port_read_byte(FDC_MSR);
+
+    while (!(!(msr & FDC_MSR_MASK_HAS_DATA) && msr & FDC_MSR_MASK_DATA_READY))
+        msr = port_read_byte(FDC_MSR);
 
     port_write_byte(FDC_FIFO, command);
 }
 
 uint8_t FDC_read_data(){
-    while (!(port_read_byte(FDC_MSR) & FDC_MSR_MASK_HAS_DATA)) ;
+    uint8_t msr = port_read_byte(FDC_MSR);
+
+    while (!(msr & FDC_MSR_MASK_HAS_DATA && msr & FDC_MSR_MASK_DATA_READY))
+        msr = port_read_byte(FDC_MSR);
+
     return port_read_byte(FDC_FIFO);
 }
 
@@ -232,10 +260,10 @@ void FDC_check_int(uint8_t *st0, uint8_t *cylinder){
 
 void FDC_start_motor(uint8_t drive){
     switch (drive){
-        case 0: port_write_byte(FDC_DOR, FDC_DOR_MASK_DRIVE0_MOTOR | FDC_DOR_MASK_RESET); break;
-        case 1: port_write_byte(FDC_DOR, FDC_DOR_MASK_DRIVE1_MOTOR | FDC_DOR_MASK_RESET); break;
-        case 2: port_write_byte(FDC_DOR, FDC_DOR_MASK_DRIVE2_MOTOR | FDC_DOR_MASK_RESET); break;
-        case 3: port_write_byte(FDC_DOR, FDC_DOR_MASK_DRIVE3_MOTOR | FDC_DOR_MASK_RESET); break;
+        case 0: port_write_byte(FDC_DOR, current_drive | FDC_DOR_MASK_DRIVE0_MOTOR | FDC_DOR_MASK_RESET | FDC_DOR_MASK_DMA); break;
+        case 1: port_write_byte(FDC_DOR, current_drive | FDC_DOR_MASK_DRIVE1_MOTOR | FDC_DOR_MASK_RESET | FDC_DOR_MASK_DMA); break;
+        case 2: port_write_byte(FDC_DOR, current_drive | FDC_DOR_MASK_DRIVE2_MOTOR | FDC_DOR_MASK_RESET | FDC_DOR_MASK_DMA); break;
+        case 3: port_write_byte(FDC_DOR, current_drive | FDC_DOR_MASK_DRIVE3_MOTOR | FDC_DOR_MASK_RESET | FDC_DOR_MASK_DMA); break;
     }
 
     /* give motor time to start up */

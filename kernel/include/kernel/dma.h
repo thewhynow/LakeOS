@@ -50,7 +50,7 @@ typedef enum {
 	DMA1_CHANMASK_REG           = 0xD4, /* write */
 	DMA1_MODE_REG               = 0xD6, /* write */
 	DMA1_CLEARBYTE_FLIPFLOP_REG = 0xD8, /* read */
-	DMA1_INTER_REG              = 0xDA, /* write*/
+	DMA1_MASTER_CLEAR_REG       = 0xDA, /* write*/
 	DMA1_UNMASK_ALL_REG         = 0xDC, /* write */
 	DMA1_MASK_REG               = 0xDE  /* write */
 } DMA_1_IO;
@@ -129,14 +129,15 @@ void DMA_set_mask   (uint8_t channel, bool mask);
 void DMA_set_mode   (uint8_t channel, uint8_t mode);
 
 void DMA_reset_flipflop(uint8_t dma);
-void DMA_reset();
+void DMA_reset(uint8_t dma);
+
 void DMA_unmask_all();
 
 #define DMA_SET_READ(channel) \
-    DMA_set_mode(channel, DMA_MODE_READ_TRANSFER | DMA_MODE_TRANSFER_SINGLE)
+    DMA_set_mode(channel, DMA_MODE_READ_TRANSFER | DMA_MODE_TRANSFER_SINGLE | DMA_MODE_MASK_AUTO)
 
 #define DMA_SET_WRITE(channel) \
-    DMA_set_mode(channel, DMA_MODE_WRITE_TRANSFER | DMA_MODE_TRANSFER_SINGLE)
+    DMA_set_mode(channel, DMA_MODE_WRITE_TRANSFER | DMA_MODE_TRANSFER_SINGLE | DMA_MODE_MASK_AUTO)
 
 
 #endif
