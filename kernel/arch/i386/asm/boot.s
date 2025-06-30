@@ -77,9 +77,9 @@ _start:
     since stack grows downwards, lowest address = bottom of stack
 */
 .section .bss
-    .align 16 // stack must be 16-byte aligned according to System-V
+    .align 16 /* stack must be 16-byte aligned according to System-V */
     stack_bottom:
-        .skip 16384 // 16 KiB
+        .skip 16384 /* 16 KiB */
     stack_top:
 
 .section .text
@@ -89,14 +89,14 @@ _higher_half:
     base pointer that will be used by C programs
     */
 
-    movl $stack_top, %esp // use 32-bit assembly, no lea required here
+    movl $stack_top, %esp /* use 32-bit assembly, no lea required here */
     movl %esp, %ebp
 
-    cli // disable interrupts
+    cli /* disable interrupts */
 
-    movl %ebx, multiboot_info // save the multiboot info
+    movl %ebx, multiboot_info /* save the multiboot info */
 
-    call kernel_main // hand over control to the C portion, everything initialized
+    call kernel_main /* hand over control to the C portion, everything initialized */
 
     /*
     if the system has nothing more to do, infinite loop:

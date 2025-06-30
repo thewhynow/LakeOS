@@ -93,6 +93,7 @@ static char keycode;
 
 void IRQ_keyboard_handler(){
     PIC_end_of_int(KEYBOARD_IRQ);
+    
     uint8_t status = port_read_byte(KEYBOARD_STATUS_PORT);
     if (status & 0x1)
         keycode = port_read_byte(KEYBOARD_DATA_PORT);

@@ -9,7 +9,7 @@ IRQ\num:
 
 
 common_irq:
-    pusha // pushes all general-purpose registers
+    pusha /* pushes all general-purpose registers */
 
     xorl %eax, %eax
     movw %ds, %ax
@@ -21,12 +21,12 @@ common_irq:
     movw %ax, %fs
     movw %ax, %gs
     movw %ax, %ss
-    
+
     pushl %esp
     call IRQ_handler
     addl $4, %esp
 
-    popl %eax // restore old segment
+    popl %eax /* restore old segment */
     movw %ax, %ds
     movw %ax, %es
     movw %ax, %fs
@@ -34,7 +34,7 @@ common_irq:
     movw %ax, %ss
 
     popa
-    addl $4, %esp // remove error code and irq_num from stack
+    addl $4, %esp /* remove error code and irq_num from stack */
     iret
 
 IMPL_IRQ 0

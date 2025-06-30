@@ -24,6 +24,9 @@ void kernel_main(){
     printf("Loading IRQ...");
     IRQ_init();
     printf("IRQ Loaded!\n");
+    printf("Loading PIT...");
+    PIT_init();
+    printf("PIT Loaded!\n");
     printf("Loading PMM...");
     PMM_init();
     printf("PMM Loaded!\n");
@@ -39,7 +42,7 @@ void kernel_main(){
     char* string;
 
     string = alloc_page();
-    string = vmm_map_page(string, string + 0xC0000000);
+    string = vmm_map_page(string, string);
 
     while (1) {
         memset(string, 0, 100);

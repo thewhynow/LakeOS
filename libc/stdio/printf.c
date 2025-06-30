@@ -1,8 +1,10 @@
-#include <limits.h>
-#include <stdbool.h>
+// #include <limits.h>
+// #include <stdbool.h>
 #include <stdarg.h>
 #include "../include/stdio.h"
 #include "../include/string.h"
+#include "../include/stdlib.h"
+#include "../include/types.h"
 
 static bool print(const char* data, size_t length){
     for (size_t i = 0; i < length; ++i)

@@ -16,14 +16,14 @@ s_flags=""
 q_flags=" -m 512"
 q_flopy=" -fda floppy.img"
 
-if [[ "$1" == "debug" ]]; then
+if [[ $1 == "debug" ]]; then
     c_flags+=" -g"
     s_flags+=" -g"
     x_flags+=" -g"
     q_flags+=" -s -S"
 fi
 
-if [[ "$1" == "log" || "$2" == "log" ]]; then
+if [[ $1 == "log" || $2 == "log" ]]; then
     q_flags+=" -d int -D qemu.log -trace enable=fdc*"
 fi
 

@@ -4,11 +4,11 @@ GDT_load:
     pushl %ebp
     movl %esp, %ebp
 
-    // load GDT
+    /* load GDT */
     movl 8(%ebp), %eax
     lgdt (%eax)
 
-    // reload code segment
+    /* reload code segment */
     movl 12(%ebp), %eax
     pushl %eax
     pushl $.reload_cs
@@ -17,7 +17,7 @@ GDT_load:
     nop
     addl $8, %esp
 
-    // reload data segments
+    /* reload data segments */
     movw 16(%ebp), %ax
     movw %ax, %ds
     movw %ax, %ds

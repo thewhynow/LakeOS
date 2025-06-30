@@ -3,7 +3,7 @@
 .macro IMPL_ISR num
 .global ISR\num
 ISR\num:
-    push $0 // push dummy error code
+    push $0 /* push dummy error code */
     push $\num
     jmp isr_common
 .endm
@@ -11,12 +11,12 @@ ISR\num:
 .macro IMPL_ISR_ERROR_CODE num
 .global ISR\num
 ISR\num:
-    push $\num // cpu pushes error code to stack for certain interrupts
+    push $\num /* cpu pushes error code to stack for certain interrupts */
     jmp isr_common
 .endm
 
 isr_common:
-    pusha // pushes all general-purpose registers
+    pusha /* pushes all general-purpose registers */
     
     xorl %eax, %eax
     movw %ds, %ax
@@ -33,7 +33,7 @@ isr_common:
     call ISR_handler
     addl $4, %esp
 
-    popl %eax // restore old segment
+    popl %eax /* restore old segment */
     movw %ax, %ds
     movw %ax, %es
     movw %ax, %fs
@@ -41,7 +41,7 @@ isr_common:
     movw %ax, %ss
 
     popa
-    add $8, %esp // remove error code and int_num from stack 
+    add $8, %esp /* remove error code and int_num from stack */
     iret
 
 IMPL_ISR 0

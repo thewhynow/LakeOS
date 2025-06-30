@@ -9,9 +9,9 @@
 extern "C" {
 #endif
 void PIT_set_freq(int hz);
-void PIT_enable();
-void PIT_disable();
 void IRQ_time_handler();
+void PIT_init();
+void PIT_sleep(uint64_t ms);
 #ifdef __cplusplus
 }
 #endif

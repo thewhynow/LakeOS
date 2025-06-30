@@ -1,5 +1,15 @@
 #include "../../include/kernel/pit.h"
+
+static uint64_t time;
+
 #define TIMER_IRQ 0x0
+
+void PIT_init(){
+    /* one pulse per millisecond */
+    PIT_set_freq(1000);
+
+    PIC_unmask(TIMER_IRQ);
+}
 
 void PIT_set_freq(int hz){
     int divisor = 1193180 / hz;
@@ -9,17 +19,12 @@ void PIT_set_freq(int hz){
 }
 
 void IRQ_time_handler(){
+    ++time;
     PIC_end_of_int(TIMER_IRQ);
-    static unsigned long sys_uptime;
-    ++sys_uptime;
-
-    // printf("time: %i\n", sys_uptime);
 }
 
-void PIT_enable(){
-    PIC_unmask(TIMER_IRQ);
-}
-
-void PIT_disable(){
-    PIC_mask(TIMER_IRQ);
+void PIT_sleep(uint64_t ms){
+    uint64_t start = time;
+    
+    while (time - start < ms);
 }

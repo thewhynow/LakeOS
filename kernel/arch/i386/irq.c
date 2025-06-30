@@ -36,14 +36,8 @@ void IRQ13();
 void IRQ14();
 void IRQ15();
 
-/* in the future should also unmask IRQ0 */
-void IRQ_timer_init(){
-    PIT_set_freq(1);
-}
-
 void IRQ_init() { 
     PIC_configure(PIC_REMAP_OFFSET, PIC_REMAP_OFFSET + 8);
-    IRQ_timer_init();
 
     {
         IDT_setgate(PIC_REMAP_OFFSET + 0, IRQ0, GDT_CODE_SEGMENT, IDT_FLAG_RING0 | IDT_FLAG_GATE_32BIT_INT | IDT_FLAG_PRESENT);

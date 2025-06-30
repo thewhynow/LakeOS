@@ -4,26 +4,26 @@
 #include "../../../libc/include/types.h"
 #include "../../../libc/include/stdlib.h"
 
-void IRQ_FDC_handler();
-void FDC_write_cmd(uint8_t command);
-void FDC_DMA_init();
-void FDC_read_init();
-void FDC_write_init();
-void FDC_write_cmd(uint8_t command);
-uint8_t FDC_read_data();
-void FDC_check_int(uint8_t *st0, uint8_t *cylinder);
-void FDC_start_motor(uint8_t drive);
-void FDC_stop_motor();
-void FDC_disable();
-void FDC_enable();
-void FDC_irq_wait();
-void FDC_CMD_specify(uint32_t stepr, uint32_t loadt, uint32_t unloadt, bool dma);
-int FDC_CMD_callibrate(uint8_t drive);
-int FDC_CMD_seek(uint8_t cyl, uint8_t head);
 void FDC_init();
-void FDC_read_sector(void *buff, uint32_t lba);
+void FDC_read_sector (void *buff, uint32_t lba);
 void FDC_write_sector(const void *buff, uint32_t lba);
-void FDC_set_drive(uint8_t drive);
+void IRQ_FDC_handler();
+
+#ifdef _FDC_H_INTERNAL
+
+static void FDC_write_cmd(uint8_t command);
+static void FDC_DMA_init();
+static uint8_t FDC_read_data();
+static void FDC_check_int(uint8_t *st0, uint8_t *cylinder);
+static void FDC_start_motor(uint8_t drive);
+static void FDC_stop_motor();
+static void FDC_disable();
+static void FDC_enable();
+static void FDC_irq_wait();
+static void FDC_CMD_specify(uint32_t stepr, uint32_t loadt, uint32_t unloadt, bool dma);
+static int FDC_CMD_callibrate(uint8_t drive);
+static int FDC_CMD_seek(uint8_t cyl, uint8_t head);
+static void FDC_set_drive(uint8_t drive);
 
 #define FLOPPY_CHANNEL 2
 #define FLOPPY_IRQ 6
@@ -209,5 +209,5 @@ typedef enum {
 	FDC_CMD_DTL_1024 = 4
 } FDC_COMMAND_DTL;
 
-
+#endif
 #endif
