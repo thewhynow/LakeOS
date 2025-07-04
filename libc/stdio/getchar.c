@@ -3,8 +3,8 @@
 
 #ifdef _KERNEL_LIBC
 
-#include "../../kernel/include/kernel/tty.h"
-#include "../../kernel/include/kernel/ps2.h"
+#include "../../kernel/include/tty.h"
+#include "../../kernel/include/ps2.h"
 
 int getchar(){
     char* buff = PS2_read();

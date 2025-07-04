@@ -1,5 +1,5 @@
 #include "../include/stdio.h"
-#include "../../kernel/include/kernel/tty.h"
+#include "../../kernel/include/tty.h"
 
 int putchar(int ic){
     char c = (char)ic;

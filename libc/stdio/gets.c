@@ -2,8 +2,8 @@
 #include "../include/string.h"
 
 #ifdef _KERNEL_LIBC
-#include "../../kernel/include/kernel/tty.h"
-#include "../../kernel/include/kernel/ps2.h"
+#include "../../kernel/include/tty.h"
+#include "../../kernel/include/ps2.h"
 
 char* gets(char* str){
     char* buff = PS2_read();

@@ -81,6 +81,7 @@ int printf(const char* restrict format, ...){
                     break;
                 }
 
+                case 'd':
                 case 'i': {
                     int i = va_arg(params, int);
                     

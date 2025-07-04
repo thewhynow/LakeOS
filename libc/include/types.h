@@ -12,7 +12,7 @@ typedef signed char int8_t;
 #ifndef __cplusplus
 typedef _Bool bool;
 #endif
-// typedef long unsigned int size_t;
+typedef long unsigned int size_t;
 #ifndef NULL
 #define NULL ((void*)0)
 #endif
