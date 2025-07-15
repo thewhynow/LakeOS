@@ -1,17 +1,3 @@
-/* constants for multiboot header */
-.set ALIGN,    1<<0             /* aligns modules on page boundaries */
-.set MEMINFO,  1<<1             /* provide memory map */
-.set GRAPHICS, 0                /* dont use graphics */
-.set FLAGS,    ALIGN | MEMINFO  /* multiboot flag field */
-.set MAGIC,    0x1BADB002       /* magic number that lets bootloader find header */
-.set CHECKSUM, -(MAGIC + FLAGS) /* checksum of above */
-
-/* 
-    declare multiboot header - makes program the kernel
-    bootloader searches for this signature in the first 8KiB
-    of the kernel file, aligned to 4 bytes
-*/
-
 .set PAGE_STRUCT_PRESENT,   0b00000000000000000000000000000001
 .set PAGE_STRUCT_WRITEABLE, 0b00000000000000000000000000000010
 .set PAGE_STRUCT_FLAGS,     0b00000000000000000000000000000011

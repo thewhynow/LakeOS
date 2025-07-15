@@ -6,21 +6,27 @@
 #include "../include/dma.h"
 #include "../include/pmm.h"
 #include "../include/vmm.h"
+#include "../include/sal.h"
 
 static bool floppy_irq_fired;
 
 uint8_t  current_drive;
 void     *buff_paddr;
 
-static void FDC_set_drive(uint8_t drive){
+bool     drives_present[] = {
+    [0] = false,
+    [1] = false
+};
+
+void FDC_set_drive(uint8_t drive){
     port_write_byte(FDC_DOR, drive | FDC_DOR_MASK_RESET | FDC_DOR_MASK_DMA);
     current_drive = drive;
 }
 
 static void FDC_lba_to_chs(uint32_t lba, uint8_t *head, uint8_t *cylinder, uint8_t *sector){
-    *head   = (lba / SECTORS_PER_TRACK) % 2;
-    *cylinder  = (lba / SECTORS_PER_TRACK) / 2;
-    *sector = lba % SECTORS_PER_TRACK + 1;
+    *head     = (lba / FLOPPY_SECTORS_PER_TRACK) % 2;
+    *cylinder = (lba / FLOPPY_SECTORS_PER_TRACK) / 2;
+    *sector   = lba % FLOPPY_SECTORS_PER_TRACK + 1;
 }
 
 static void FDC_enable(){
@@ -67,7 +73,7 @@ static void FDC_DMA_init(){
     DMA_set_full_address(FLOPPY_CHANNEL, (uint32_t) buff_paddr);
     DMA_reset_flipflop(0);
 
-    DMA_set_count(FLOPPY_CHANNEL, BYTES_PER_SECTOR - 1);
+    DMA_set_count(FLOPPY_CHANNEL, FLOPPY_BYTES_PER_SECTOR - 1);
 
     DMA_set_mask(FLOPPY_CHANNEL, false);
 }
@@ -79,23 +85,40 @@ static int FDC_check_floppies(){
 
     /* drive type 4 -> 1.44MB 3.5" */
 
-    if (drives >> 4 == 4) {
-        current_drive = 0;
+    drives_present[0] = !!(drives >> 4 == 4);
+    drives_present[1] = !!((drives & 0xF) == 4);
+
+    if (drives_present[0] || drives_present[1])
         return 0;
-    }
-    if ((drives & 0xF) == 4){
-        current_drive = 1;
-        return 0;
-    }
 
     /* there is no drive */
     return -1;
 }
 
 void FDC_init(){
-    if (FDC_check_floppies()){
-        // printf("No floppy-disks mounted\n");
+    if (FDC_check_floppies())
         return;
+        
+    storage_device_t device;
+    if (drives_present[0]){
+        device = (storage_device_t){
+            .maxlba = 2879,
+            .name = "Floppy Disk Drive 0",
+            .type = STORAGE_TYPE_FLOPPY,
+            .drive_num = 0
+        };
+        
+        SAL_add_device(&device);
+    }
+    if (drives_present[1]){
+        device = (storage_device_t){
+            .maxlba = 2879,
+            .name = "Floppy Disk Drive 1",
+            .type = STORAGE_TYPE_FLOPPY,
+            .drive_num = 1
+        };
+
+        SAL_add_device(&device);
     }
 
     buff_paddr = alloc_page();
@@ -125,7 +148,7 @@ static void FDC_CMD_read_sector(uint8_t head, uint8_t track, uint8_t sector){
     FDC_write_cmd(head);
     FDC_write_cmd(sector);
     FDC_write_cmd(FDC_CMD_DTL_512);
-    FDC_write_cmd(sector + 1 >= SECTORS_PER_TRACK ? SECTORS_PER_TRACK : sector + 1);
+    FDC_write_cmd(sector + 1 >= FLOPPY_SECTORS_PER_TRACK ? FLOPPY_SECTORS_PER_TRACK : sector + 1);
     FDC_write_cmd(FDC_CMD_GAP3_LENGTH_3_5);
     FDC_write_cmd(0xFF);
     
@@ -145,7 +168,7 @@ static void FDC_CMD_write_sector(uint8_t head, uint8_t track, uint8_t sector){
     FDC_write_cmd(head);
     FDC_write_cmd(sector);
     FDC_write_cmd(FDC_CMD_DTL_512);
-    FDC_write_cmd(sector + 1 >= SECTORS_PER_TRACK ? SECTORS_PER_TRACK : sector + 1);
+    FDC_write_cmd(sector + 1 >= FLOPPY_SECTORS_PER_TRACK ? FLOPPY_SECTORS_PER_TRACK : sector + 1);
     FDC_write_cmd(FDC_CMD_GAP3_LENGTH_3_5);
     FDC_write_cmd(0xFF);
 
@@ -168,11 +191,11 @@ void FDC_read_sector(void *buff, uint32_t lba){
 
     FDC_stop_motor();
 
-    memcpy(buff, (void*) buff_paddr, BYTES_PER_SECTOR);
+    memcpy(buff, (void*) buff_paddr, FLOPPY_BYTES_PER_SECTOR);
 }
 
 void FDC_write_sector(const void *buff, uint32_t lba){
-    memcpy((void*)buff_paddr, buff, BYTES_PER_SECTOR);
+    memcpy((void*)buff_paddr, buff, FLOPPY_BYTES_PER_SECTOR);
 
     uint8_t head, cylinder, sector;
 

@@ -1,5 +1,30 @@
 #define _ATA_H_INTERNAL
 #include "../include/ata.h"
+#include "../include/sal.h"
+
+IDE_channel_regs_t channels[2];
+
+uint8_t ide_buff[2048];
+uint8_t ide_irq_fired;
+uint8_t atapi_packet[12] = {[0] = 0xA8};
+
+struct IDE_device {
+    /* 0 (empty) 1 (drive exists) */
+    uint8_t exists;
+    /* 0 (primary channel) 1 (secondary channel) */
+    uint8_t channel;
+    /* 0 (master drive) 1 (slave drive) */
+    uint8_t is_slave_drive;
+    /* 0 (ATA) 1 (ATAPI) */
+    uint16_t type;
+    uint16_t signature;
+    uint16_t features;
+    uint32_t command_sets;
+    /* size in sectors */
+    uint32_t size;
+    /* model name as string */
+    char model[41];
+} IDE_devices[4];
 
 uint8_t IDE_read(uint8_t channel, ATA_REG_PORT_OFFSETS reg){
     uint8_t res = 0;
@@ -155,14 +180,14 @@ void IDE_init(){
 
     for (int i = 0; i < 4; ++i){
         if (IDE_devices[i].exists){
-            // static const char *drive_types[] = { "ATA", "ATAPI" };
+            storage_device_t device = {
+                .maxlba = IDE_devices[i].size / IDE_ATA_SECTOR_SIZE - 1,
+                .name = IDE_devices[i].model,
+                .type = STORAGE_TYPE_ATA,
+                .drive_num = i
+            };
 
-            // printf ( 
-            //     "\nFound %s drive %i GB - %s", 
-            //     drive_types[IDE_devices[i].type],
-            //     IDE_devices[i].size / 1024 / 1024 / 2,
-            //     IDE_devices[i].model
-            // );
+            SAL_add_device(&device);
         }
     }
 }
@@ -282,7 +307,7 @@ void IDE_ATA_operation(uint8_t direction, uint8_t drive, uint32_t lba, uint16_t 
     }
 }
 
-uint8_t IDE_ATA_write_sector(uint8_t drive, uint32_t lba, void *buff){
+uint8_t IDE_ATA_write_sector(uint8_t drive, uint32_t lba, const void *buff){
     if (drive > 3 || !IDE_devices[drive].exists)
         return 1;
 
@@ -304,4 +329,18 @@ uint8_t IDE_ATA_read_sector(uint8_t drive, uint32_t lba, void *buff){
     IDE_ATA_operation(IDE_ATA_READ, drive, lba, buff);
 
     return 0;
+}
+
+static uint8_t current_drive;
+
+void ATA_write_sector(const void *buff, uint32_t lba){
+    IDE_ATA_write_sector(current_drive, lba, buff);
+}
+
+void ATA_read_sector (void *buff, uint32_t lba){
+    IDE_ATA_read_sector(current_drive, lba, buff);
+}
+
+void IDE_set_drive(uint8_t drive){
+    current_drive = drive;
 }

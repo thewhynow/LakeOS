@@ -92,6 +92,12 @@ void VMM_init();
 
 void *vmm_map_page(void *paddr, void *vaddr);
 
+/**
+ * allocates a page physically and maps it to the specified address
+ * if vaddr == NULL, identity-maps the page
+ */
+void *valloc_page(void *vaddr);
+
 #ifdef __cplusplus
 }
 #endif

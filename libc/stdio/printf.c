@@ -116,9 +116,8 @@ int printf(const char* restrict format, ...){
             }
             ++format;
         }
-        else {
+        else
             putchar(*format++);
-        }
     }
 
     va_end(params);

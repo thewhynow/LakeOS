@@ -119,6 +119,11 @@ void *vmm_map_page(void *paddr, void *vaddr){
     return vaddr;
 }
 
+void *valloc_page(void *vaddr){
+    void *page = alloc_page();
+    return vmm_map_page(page, vaddr ? vaddr : page);
+}
+
 void VMM_init() {
     
     extern uint8_t *bitmap;
@@ -135,7 +140,7 @@ void VMM_init() {
     for (size_t i = 0; i < num_pages; ++i)
         vmm_map_page(bitmap, bitmap + 0xC0000000 + i * 4096);
     
-    /* just invalidate the identity-mapping page table */
+    /* just invalidate the identity-mapping page directory entry */
     page_directory.entries[PAGE_DIR_INDEX(0x0)] = 0;
 
     bitmap += 0xC0000000;

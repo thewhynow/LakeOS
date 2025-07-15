@@ -8,6 +8,8 @@ void FDC_init();
 void FDC_read_sector (void *buff, uint32_t lba);
 void FDC_write_sector(const void *buff, uint32_t lba);
 void IRQ_FDC_handler();
+void FDC_set_drive(uint8_t drive);
+#define FLOPPY_BYTES_PER_SECTOR 512
 
 #ifdef _FDC_H_INTERNAL
 
@@ -23,12 +25,10 @@ static void FDC_irq_wait();
 static void FDC_CMD_specify(uint32_t stepr, uint32_t loadt, uint32_t unloadt, bool dma);
 static int FDC_CMD_callibrate(uint8_t drive);
 static int FDC_CMD_seek(uint8_t cyl, uint8_t head);
-static void FDC_set_drive(uint8_t drive);
 
 #define FLOPPY_CHANNEL 2
 #define FLOPPY_IRQ 6
-#define SECTORS_PER_TRACK 18
-#define BYTES_PER_SECTOR 512
+#define FLOPPY_SECTORS_PER_TRACK 18
 
 /**
  * FDC REGISTERS

@@ -107,29 +107,7 @@ typedef struct {
     uint16_t no_interrupt;
 } IDE_channel_regs_t; 
 
-IDE_channel_regs_t channels[2];
 
-uint8_t ide_buff[2048];
-uint8_t ide_irq_fired;
-uint8_t atapi_packet[12] = {[0] = 0xA8};
-
-struct IDE_device {
-    /* 0 (empty) 1 (drive exists) */
-    uint8_t exists;
-    /* 0 (primary channel) 1 (secondary channel) */
-    uint8_t channel;
-    /* 0 (master drive) 1 (slave drive) */
-    uint8_t is_slave_drive;
-    /* 0 (ATA) 1 (ATAPI) */
-    uint16_t type;
-    uint16_t signature;
-    uint16_t features;
-    uint32_t command_sets;
-    /* size in sectors */
-    uint32_t size;
-    /* model name as string */
-    char model[41];
-} IDE_devices[4];
 
 uint8_t IDE_read(uint8_t channel, ATA_REG_PORT_OFFSETS reg);
 void    IDE_write(uint8_t channel, ATA_REG_PORT_OFFSETS reg, uint8_t data);
@@ -171,7 +149,15 @@ uint8_t IDE_ATA_read (uint8_t drive, uint32_t lba, void *buff);
 #define IDE_ATA_SECTOR_SIZE 256
 
 void IDE_init();
-uint8_t IDE_ATA_write_sector(uint8_t drive, uint32_t lba, void *buff);
+uint8_t IDE_ATA_write_sector(uint8_t drive, uint32_t lba, const void *buff);
 uint8_t IDE_ATA_read_sector (uint8_t drive, uint32_t lba, void *buff);
+
+
+/**
+ * to provide a similar interface with the FDC_* functions
+ */
+void ATA_write_sector(const void *buff, uint32_t lba);
+void ATA_read_sector (void *buff, uint32_t lba);
+void IDE_set_drive(uint8_t drive);
 
 #endif
