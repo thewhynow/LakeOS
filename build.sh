@@ -30,13 +30,13 @@ else
     grub_iso_path="grub-mkrescue"
 fi
 
-x_flags="-std=c++98 -ffreestanding -Wall -Wextra -D_KERNEL_LIBC -nostdlib -O0"
-c_flags="-std=gnu99 -ffreestanding -Wall -Wextra -D_KERNEL_LIBC -nostdlib -O0"
+x_flags="-std=c++98 -ffreestanding -D_KERNEL_LIBC -nostdlib -O0 -w"
+c_flags="-std=gnu99 -ffreestanding -D_KERNEL_LIBC -nostdlib -O0 -w"
 s_flags=""
 q_flags=" -m 512"
-bt_disk=" -drive file=lakeos.iso,format=raw,index=0,if=ide"
+q_flags+=" -drive file=lakeos.iso,format=raw,index=0,if=ide"
 
-# start at 1 since boot disk uses drive 0
+# start at 1 since boot disk uses drive 0 #
 
 f_index=0
 h_index=1
@@ -62,10 +62,6 @@ for arg in $@; do
             dd if=/dev/zero of=harddisk${h_index}.img bs=1M count=1
             q_flags+=" -drive file=harddisk${h_index}.img,format=raw,index=${h_index},if=ide"
             ((h_index++))
-            ;;
-        "fd-fat")
-            q_flags+=" -drive file=floppy.img,format=raw,index=${f_index},if=floppy"
-            ((f_index++))
             ;;
     esac
 done
@@ -118,7 +114,7 @@ rm *.o
 
 $grub_iso_path -o lakeos.iso iso
 
-qemu-system-i386 $bt_disk $q_flags
+qemu-system-i386 $q_flags
 
 rm lakeos.iso
 rm iso/boot/lakeos.elf

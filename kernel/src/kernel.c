@@ -11,9 +11,25 @@
 #include "../include/fdc.h"
 #include "../include/ata.h"
 #include "../include/sal.h"
+#define _FAT_H_INTERNAL
 #include "../include/fat.h"
 
-void kernel_main(){
+/**
+ * a small utility function that tests the SAL
+ *  for each storage device attatched.
+ */
+void SAL_test(){
+    uint32_t device_c;
+    storage_device_t *devices = SAL_get_devices(&device_c);
+
+    uint8_t data[0xFFF];
+    memset(data, 0xFF, 0xFFF);
+
+    for (uint32_t i = 0; i < device_c; ++i)
+        SAL_write(devices + i, 0xFFF, 0x16BE, &data);
+}
+
+void kernel_main() {
     terminal_init();
     printf("Loading GDT...");
     GDT_init();
@@ -53,30 +69,12 @@ void kernel_main(){
     for (int i = 0; i < (int) num_devices; ++ i)
         printf("Device %i name: %s\n", i, devices[i].name);
     
-    char *data = valloc_page(NULL);
-    valloc_page(data + 4096);
+    SAL_test();
 
-    printf("Testing Storage Abstraction Layer...\n");
-
-    for (int i = 0; i < (int) num_devices; ++i){
-        memcpy(data, "Test Passed!", 13);
-        SAL_write(devices + i, 4096*2, 111, data);
-        memcpy(data, "Test Failed >:(", 13);
-        SAL_read(devices + i, 4096*2, 111, data);
-
-        if (memcmp(data, "Test Passed!", 13))
-            printf("Test Failed >:(");
-        else
-            printf("Test Passed!\n");
-    }
-    
     printf("Welcome to lakeOS!\n");
     
-    char* string;
-
-    string = alloc_page();
-    string = vmm_map_page(string, string);
-
+    char *string = valloc_page(NULL);
+    
     while (1) {
         memset(string, 0, 100);
         gets(string);
@@ -85,6 +83,4 @@ void kernel_main(){
         if (!memcmp(string, "quit", 4))
             for (;;);
     }
-
-    for (;;);
 }

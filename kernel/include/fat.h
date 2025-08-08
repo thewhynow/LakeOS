@@ -4,8 +4,6 @@
 #include "../../libc/include/types.h"
 #include "sal.h"
 
-#warning UNDEFINE _FAT_H_INTERNAL U DUMB IDIOT
-#define _FAT_H_INTERNAL
 #ifdef _FAT_H_INTERNAL
 
 typedef struct {
@@ -176,7 +174,7 @@ typedef struct {
      *      "FAT 32  "
      */
     uint8_t file_sys_type[8];
-} t_BootSectorCommonExt;
+} __attribute__((__packed__)) t_BootSectorCommonExt;
 
 typedef struct {
     /* all fields defined here do NOT exist for FAT12+16 volumes */
@@ -288,17 +286,16 @@ typedef enum {
 } e_FAT;
 
 typedef struct {
-    e_FAT                 type;
     t_BootSectorCommon    boot_sector;
-    
     union {
         t_BootSectorCommonExt  old_ext;
         t_BootSector32Ext      fat32_ext;
     };
-
     t_BootSectorCommonExt      fat32_common_ext;
-
+    
+    e_FAT                 type;
     storage_device_t     *device;
+    size_t                partition_start;
 } t_FATContext;
 
 #define SECTORS_PER_FAT(context) (            \
@@ -317,16 +314,12 @@ typedef struct {
  *  - since the first 2 clusters are unused, they have special
  *    meanings within the FAT
  *    - FAT[0]:
- *      - contains the BPB_meda byte value in low byte
+ *      - contains the BPB_media byte value in low byte
  *      - rest is all 1s
  *    - FAT[1]:
  *      - EOC Mark
  *      - special but irrelevant flags on FAT16+32
  */
-
-#warning REPLACE FAT_DIRECTORY_ENTRY_SZ WITH SIZEOF EXPRESSION
-
-#define FAT_DIRECTORY_ENTRY_SZ 32
 
 /**
  * these tables are used in FAT16+32 volumes to determine the
@@ -347,7 +340,7 @@ typedef struct {
 /**
  * for this table to work, BPB.reserved_sectors = 1, BPB.num_fats = 2, BPB.root_entry_count = 512
  */
-t_TotalSectors_SectorsPerCluster FAT16_NUM_SECTORS_TO_SECTORS_PER_CLUSTER[] = {
+static const t_TotalSectors_SectorsPerCluster FAT16_NUM_SECTORS_TO_SECTORS_PER_CLUSTER[] = {
     {8400,       0},  /* disks under 4.1MB, invalid */
     {32680,      2},  /* disks up to 16 MB, 1k cluster */
     {262144,     4},  /* disks up to 128 MB, 2k cluster */
@@ -361,7 +354,7 @@ t_TotalSectors_SectorsPerCluster FAT16_NUM_SECTORS_TO_SECTORS_PER_CLUSTER[] = {
     {0xFFFFFFFF, 0}   /* any disk greater than 2GB, invalid */
 };
 
-t_TotalSectors_SectorsPerCluster FAT32_NUM_SECTORS_TO_SECTORS_PER_CLUSTER[] = {
+static const t_TotalSectors_SectorsPerCluster FAT32_NUM_SECTORS_TO_SECTORS_PER_CLUSTER[] = {
     {66600,      0},  /* disks up to 32.5 MB, invalid */
     {532480,     1},  /* disks up to 260 MB, .5k cluster */
     {16777216,   8},  /* disks up to 8 GB, 4k cluster */
@@ -370,6 +363,203 @@ t_TotalSectors_SectorsPerCluster FAT32_NUM_SECTORS_TO_SECTORS_PER_CLUSTER[] = {
     {0xFFFFFFFF, 64}  /* disks greater than 32GB, 32k cluster */
 };
 
+/**
+ * FAT Directory Structure
+ * 
+ * - on FAT12+16 media, the root directory is a fixed length and is in a fixed
+ *   location on the media. 
+ */
+
+
+ /**
+  * upper two bits of byte are reserved and should be set to 0
+  */
+typedef enum {
+    /* writes to the file should fail */
+    ENTRY_ATTR_READ_ONLY = 0x01,
+    /* file should not show up in normal directory listings */
+    ENTRY_ATTR_HIDDEN    = 0x02,
+    /* file is part of the operating system */
+    ENTRY_ATTR_SYSTEM    = 0x04,
+    /**
+     * - there should only be one "file" that has this attribute
+     * - name of said file is the volume label
+     * - has to be in the root directory
+     * - first_cluster_* should be 0
+     */
+    ENTRY_ATTR_VOLUME_ID = 0x08,
+    /* file is a container for other files (no shit) */
+    ENTRY_ATTR_DIRECTORY = 0x10,
+    /* bit is set when the file is written, renamed, or created */
+    ENTRY_ATTR_ARCHIVE   = 0x20,
+    
+    ENTRY_ATTR_LONG_NAME = ENTRY_ATTR_READ_ONLY | ENTRY_ATTR_HIDDEN | ENTRY_ATTR_SYSTEM | ENTRY_ATTR_VOLUME_ID,
+    
+    ENTRY_ATTR_MASK_LONG_NAME = ENTRY_ATTR_LONG_NAME | ENTRY_ATTR_DIRECTORY | ENTRY_ATTR_ARCHIVE
+} e_DirEntryAttributes;
+
+/**
+ * when a directory is created:
+ *  - set DirEntry.file_size to 0
+ *  - allocate one cluster to the directory
+ *  - assign appropriate cluster num fields
+ *  - place EOC mark in the cluster entry
+ *  - initialize cluster to 0
+ *  - if directory is NOT root:
+ *      - create two 32-byte dir entries
+ *      - first entry has name set to "."
+ *          set cluster nums to same
+ *      - second entry has name set to ".."
+ *          set cluster nums to above dir
+ *          set 0 if directory is root directory
+ */
+
+/**
+ * date & time formats:
+ * date:
+ *  [0:4]  -> day of month
+ *  [5:8]  -> month of year [1 = jan, 12 = december]
+ *  [9:15] -> count of years from 1980 [1980, 2107]
+ *  - [1/1/1980, 12/31/2107]
+ * time:
+ *  [0:4]   -> 2 second count [0, 29 -> 0s, 58s]
+ *  [5:10]  -> minutes [0, 59]
+ *  [11:15] -> hours   [0, 23]
+ *  - [12:00:00 AM, 11:59:58 PM]
+ */
+
+typedef struct {
+    /**
+     * short name
+     * - if name[0] == 0xE5
+     *   then the directory entry is free; no file or directory
+     *   is in this entry
+     * - if name[0] == 0x00
+     *   then the directory entry is free, AND all the other entries
+     *   in the directory are also free
+     * - if name[0] == 0x05
+     *   then the actual byte value for name[0] is 0xE5; Japanese
+     *   character sets use this value for a specific character
+     * 
+     * - is broken into two parts:
+     *   8-character file name
+     *   3-character extension
+     *   (implied '.' between name and extension)
+     *   
+     *  - lower-case characters are illegal
+     *  - characters less than 0x20 (besides 0x05 special case) are illegal
+     *  - 0x22, 0x2A, 0x2B, 0x2C, 0x2E, 0x2F, 0x3A, 0x3B, 0x3C, 0x3D, 
+     *    0x3E, 0x3F, 0x5B, 0x5C, 0x5D, and 0x7C are illegal
+     *  - name[0] != 0x20 (int)' '
+     */
+    uint8_t name[11];
+    
+    /* refer to e_FAT32_DirEntryAttribMasks for bit definitions */
+    uint8_t attributes;
+    
+    /* reserved, set to 0 on file creation */
+    uint8_t reserved;
+    
+    /**
+     * stamps the tenth second at which a file was created
+     * since the creation_time field has 2-second precision,
+     * the value range for this field is 0-199 inclusive
+     */
+    uint8_t  creation_tenths;
+    uint16_t creation_time;
+    uint16_t creation_date;
+
+    /* last date of a read or write operation */
+    uint16_t last_access_date;
+
+    /**
+     * high word of the directories first cluster number
+     * always 0 for FAT12+16
+     */
+    uint16_t first_cluster_high;
+
+    uint16_t last_write_time;
+    uint16_t last_write_date;
+
+    /* low word of the directories first cluster number */
+    uint16_t first_cluster_low;
+
+    /* the size of the file, in BYTES */
+    uint32_t file_size;
+} __attribute__((__packed__)) t_ShortDirEntry;
+
+typedef struct {
+    /**
+     * the order of this entry in a sequence of
+     * long dir entries.
+     * 
+     * if masked with 0x40, this entry is the last
+     * in a sequence of long dir entries. 
+     * 
+     * all valid sets of long dir entries must 
+     * begin with this mask and then decrease
+     * towards 1, then the short dir entry
+     */
+    uint8_t order;
+
+    /**
+     * characters 1-5 of the long name component
+     *  in this entry.
+     */
+    uint16_t long_name_1[5];
+
+    /**
+     * must be FAT32_DIR_ATTR_LONG_NAME
+     */
+    uint8_t attribute;
+
+    /**
+     * if zero, this entry is part of a long name 
+     * 
+     * other values are reserved and should be ignored
+     */
+    uint8_t type;
+
+    /**
+     * checksum of the short name at the end of the
+     *  LDIR entry chain
+     * 
+     * refer to
+     *  uint8_t LDIR_entry_checksum(const uint8_t *short_name)
+     */
+    uint8_t checksum;
+
+    /**
+     * characters 6-11 of the long name component
+     *  in this entry
+     */
+    uint16_t long_name_2[6];
+
+    /**
+     * set to ZERO
+     * irrelevant, but must be set for compatibility
+     */
+    uint16_t first_cluster;
+
+    /**
+     * characters 12-13 of the long name component
+     *  in this entry
+     */
+    uint16_t long_name_3[2];
+} __attribute__((__packed__)) t_LongDirEntry;
+
+typedef enum {
+    DIR_ENTRY_INVALID,
+    DIR_ENTRY_LONG_NAME,
+    DIR_ENTRY_FILE,
+    DIR_ENTRY_DIRECTORY,
+    DIR_ENTRY_VOL_LABEL,
+} e_DirEntryType;
+
+void FAT_context_init(t_FATContext *context);
+void FAT_test(t_FATContext *context);
+
 #endif
+
 
 #endif

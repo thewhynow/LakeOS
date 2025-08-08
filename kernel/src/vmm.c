@@ -26,36 +26,6 @@ typedef struct {
     pd_entry_t entries[ENTRIES_PER_STRUCT];
 } pdirectory_t;
 
-/* allocates 4kb block of physical memory for PTE */
-static bool vm_assign_entry(pt_entry_t *entry){
-    void *block = alloc_page();
-
-    if (!block)
-        return false;
-    else {
-        ENTRY_SET_FRAME(*entry, block);
-        ENTRY_ADD_ATTRIBUTE(*entry, PAGE_STRUCT_ENTRY_PRESENT);
-        return true;
-    }
-}
-
-/* frees a 4kb block of physical memory for PTE */
-static void vm_unassign_entry(pt_entry_t *entry){
-    void *block = (void*) ENTRY_GET_ATTRIBUTE(*entry, PAGE_STRUCT_PAGE_FRAME);
-    if (block)
-        free_page(block);
-    
-    ENTRY_DEL_ATTRIBUTE(*entry, PAGE_STRUCT_ENTRY_PRESENT);
-}
-
-static pt_entry_t *get_pte_from_vaddr(ptable_t *ptable, vaddr_t vaddr){
-    return &ptable->entries[PAGE_TABLE_INDEX(vaddr)];
-}
-
-static pd_entry_t *get_pde_from_vaddr(pdirectory_t *pdirectory, vaddr_t vaddr){
-    return &pdirectory->entries[PAGE_DIR_INDEX(vaddr)];
-}
-
 extern pdirectory_t page_directory;
 extern ptable_t     higher_half_page_table;
 

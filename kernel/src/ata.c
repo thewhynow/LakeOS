@@ -180,14 +180,17 @@ void IDE_init(){
 
     for (int i = 0; i < 4; ++i){
         if (IDE_devices[i].exists){
-            storage_device_t device = {
-                .maxlba = IDE_devices[i].size / IDE_ATA_SECTOR_SIZE - 1,
-                .name = IDE_devices[i].model,
-                .type = STORAGE_TYPE_ATA,
-                .drive_num = i
-            };
+            SAL_add_device(
+                (storage_device_t){
+                    .maxlba = IDE_devices[i].size / IDE_ATA_SECTOR_SIZE - 1,
+                    .sector_size = IDE_ATA_SECTOR_SIZE,
+                    .name = IDE_devices[i].model,
+                    .drive_num = i,
 
-            SAL_add_device(&device);
+                    .read_sector  = ATA_read_sector,
+                    .write_sector = ATA_write_sector,
+                }
+            );
         }
     }
 }
@@ -333,14 +336,10 @@ uint8_t IDE_ATA_read_sector(uint8_t drive, uint32_t lba, void *buff){
 
 static uint8_t current_drive;
 
-void ATA_write_sector(const void *buff, uint32_t lba){
-    IDE_ATA_write_sector(current_drive, lba, buff);
+void ATA_write_sector(storage_device_t *device, const void *buff, uint32_t lba){
+    IDE_ATA_write_sector(device->drive_num, lba, buff);
 }
 
-void ATA_read_sector (void *buff, uint32_t lba){
-    IDE_ATA_read_sector(current_drive, lba, buff);
-}
-
-void IDE_set_drive(uint8_t drive){
-    current_drive = drive;
+void ATA_read_sector (storage_device_t *device, void *buff, uint32_t lba){
+    IDE_ATA_read_sector(device->drive_num, lba, buff);
 }

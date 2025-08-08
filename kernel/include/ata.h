@@ -144,20 +144,13 @@ void    IDE_write(uint8_t channel, ATA_REG_PORT_OFFSETS reg, uint8_t data);
 uint8_t IDE_ATA_write(uint8_t drive, uint32_t lba, void *buff);
 uint8_t IDE_ATA_read (uint8_t drive, uint32_t lba, void *buff);
 
-#endif
-
 #define IDE_ATA_SECTOR_SIZE 256
 
+void ATA_write_sector(storage_device_t *device, const void *buff, uint32_t lba);
+void ATA_read_sector (storage_device_t *device, void *buff, uint32_t lba);
+
+#endif
+
 void IDE_init();
-uint8_t IDE_ATA_write_sector(uint8_t drive, uint32_t lba, const void *buff);
-uint8_t IDE_ATA_read_sector (uint8_t drive, uint32_t lba, void *buff);
-
-
-/**
- * to provide a similar interface with the FDC_* functions
- */
-void ATA_write_sector(const void *buff, uint32_t lba);
-void ATA_read_sector (void *buff, uint32_t lba);
-void IDE_set_drive(uint8_t drive);
 
 #endif

@@ -3,16 +3,17 @@
 
 #include "../../libc/include/types.h"
 #include "../../libc/include/stdlib.h"
+#include "sal.h"
 
 void FDC_init();
-void FDC_read_sector (void *buff, uint32_t lba);
-void FDC_write_sector(const void *buff, uint32_t lba);
 void IRQ_FDC_handler();
-void FDC_set_drive(uint8_t drive);
-#define FLOPPY_BYTES_PER_SECTOR 512
 
 #ifdef _FDC_H_INTERNAL
 
+void FDC_read_sector(storage_device_t *device, void *buff, uint32_t lba);
+void FDC_write_sector(storage_device_t *device, const void *buff, uint32_t lba);
+void FDC_set_drive(uint8_t drive);
+#define FLOPPY_BYTES_PER_SECTOR 512
 static void FDC_write_cmd(uint8_t command);
 static void FDC_DMA_init();
 static uint8_t FDC_read_data();

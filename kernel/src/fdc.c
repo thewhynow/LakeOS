@@ -13,7 +13,7 @@ static bool floppy_irq_fired;
 uint8_t  current_drive;
 void     *buff_paddr;
 
-bool     drives_present[] = {
+static bool drives_present[] = {
     [0] = false,
     [1] = false
 };
@@ -98,28 +98,30 @@ static int FDC_check_floppies(){
 void FDC_init(){
     if (FDC_check_floppies())
         return;
-        
-    storage_device_t device;
-    if (drives_present[0]){
-        device = (storage_device_t){
-            .maxlba = 2879,
-            .name = "Floppy Disk Drive 0",
-            .type = STORAGE_TYPE_FLOPPY,
-            .drive_num = 0
-        };
-        
-        SAL_add_device(&device);
-    }
-    if (drives_present[1]){
-        device = (storage_device_t){
-            .maxlba = 2879,
-            .name = "Floppy Disk Drive 1",
-            .type = STORAGE_TYPE_FLOPPY,
-            .drive_num = 1
-        };
 
-        SAL_add_device(&device);
-    }
+    if (drives_present[0])
+        SAL_add_device(
+            (storage_device_t){
+                .maxlba = 2879,
+                .sector_size = FLOPPY_BYTES_PER_SECTOR,
+                .name = "Floppy Disk Drive 1",
+                .drive_num = 0,
+                .read_sector  = FDC_read_sector,
+                .write_sector = FDC_write_sector
+            }
+        );
+
+    if (drives_present[1])
+        SAL_add_device(
+            (storage_device_t){
+                .maxlba = 2879,
+                .sector_size = FLOPPY_BYTES_PER_SECTOR,
+                .name = "Floppy Disk Drive 1",
+                .drive_num = 1,
+                .read_sector  = FDC_read_sector,
+                .write_sector = FDC_write_sector
+            }
+        );
 
     buff_paddr = alloc_page();
     if ((0xFFFFFF - (unsigned long)buff_paddr) < 4096)
@@ -178,7 +180,9 @@ static void FDC_CMD_write_sector(uint8_t head, uint8_t track, uint8_t sector){
         FDC_read_data();
 }
 
-void FDC_read_sector(void *buff, uint32_t lba){
+void FDC_read_sector(storage_device_t *device, void *buff, uint32_t lba){
+    current_drive = device->drive_num;
+
     uint8_t head, cylinder, sector;
 
     FDC_lba_to_chs(lba, &head, &cylinder, &sector);
@@ -194,7 +198,9 @@ void FDC_read_sector(void *buff, uint32_t lba){
     memcpy(buff, (void*) buff_paddr, FLOPPY_BYTES_PER_SECTOR);
 }
 
-void FDC_write_sector(const void *buff, uint32_t lba){
+void FDC_write_sector(storage_device_t *device, const void *buff, uint32_t lba){
+    current_drive = device->drive_num;
+    
     memcpy((void*)buff_paddr, buff, FLOPPY_BYTES_PER_SECTOR);
 
     uint8_t head, cylinder, sector;
