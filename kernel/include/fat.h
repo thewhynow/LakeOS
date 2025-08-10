@@ -295,6 +295,15 @@ typedef struct {
     
     e_FAT                 type;
     storage_device_t     *device;
+
+    /**
+     * even though this field does exist, do not
+     *  make the mistake assuming that this field 
+     *  is actually used in offset calculations!
+     * 
+     * it would be considered good practice to set
+     *  it, just in case...
+     */
     size_t                partition_start;
 } t_FATContext;
 

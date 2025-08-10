@@ -14,21 +14,6 @@
 #define _FAT_H_INTERNAL
 #include "../include/fat.h"
 
-/**
- * a small utility function that tests the SAL
- *  for each storage device attatched.
- */
-void SAL_test(){
-    uint32_t device_c;
-    storage_device_t *devices = SAL_get_devices(&device_c);
-
-    uint8_t data[0xFFF];
-    memset(data, 0xFF, 0xFFF);
-
-    for (uint32_t i = 0; i < device_c; ++i)
-        SAL_write(devices + i, 0xFFF, 0x16BE, &data);
-}
-
 void kernel_main() {
     terminal_init();
     printf("Loading GDT...");
@@ -68,8 +53,11 @@ void kernel_main() {
     storage_device_t *devices = SAL_get_devices(&num_devices);
     for (int i = 0; i < (int) num_devices; ++ i)
         printf("Device %i name: %s\n", i, devices[i].name);
-    
-    SAL_test();
+
+    t_FATContext ctx = (t_FATContext){ .device = devices + 0, .partition_start = 0 };
+    FAT_context_init(&ctx);
+
+    FAT_test(&ctx);
 
     printf("Welcome to lakeOS!\n");
     

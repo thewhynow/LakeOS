@@ -81,7 +81,7 @@ uint32_t FAT_set_entry(t_FATContext *context, uint8_t fat_num, uint32_t cluster,
 
             if (cluster % 2){
                 data <<= 4;
-                entry &= 0xF;
+                entry &= 0x000F;
             }
             else {
                 data  &= 0x0FFF;
@@ -337,43 +337,12 @@ uint32_t FindFreeCluster(t_FATContext *context){
 }
 
 /**
- * creates a file named "A.TXT"
- *  in the root directory
- */
-void FAT_test(t_FATContext *context){
-    t_ShortDirEntry entry = {
-        .name = {
-            'H', 'E', 'L', 'L', 'O', ' ', ' ', ' ', 'T', 'X', 'T'
-        },
-        .attributes = DIR_ENTRY_FILE,
-        .reserved = 0,
-        .creation_tenths = 0,
-        .creation_time = 0,
-        .creation_date = 0,
-        .last_access_date = 0,
-
-        .first_cluster_high = 0,
-
-        .last_write_time = 0,
-        .last_write_date = 0,
-
-        .first_cluster_low = FindFreeCluster(context),
-        .file_size = 0
-    };
-
-    for (uint8_t i = 0; i < context->boot_sector.num_fat; ++i)
-        FAT_set_entry(context, i, entry.first_cluster_low, 0xFFF);
-
-    size_t root_dir_off = RootDirSector(context) * context->boot_sector.bytes_per_sector;
-
-    SAL_write(context->device, sizeof(t_ShortDirEntry), root_dir_off, &entry); 
-    memset(&entry, 0, sizeof entry);
-    SAL_read (context->device, sizeof(t_ShortDirEntry), root_dir_off, &entry);
-}
-
-/**
  * reads all the appropriate fields from disk
  *  and determines the FAT type
+ * 
+ * assumes:
+ *  context->device is set
+ *  context->partition_start is set
  */
 void FAT_context_init(t_FATContext *context){
     SAL_read(context->device, sizeof(t_BootSectorCommon), 0 + context->partition_start, &context->boot_sector);
@@ -405,4 +374,37 @@ void FAT_context_init(t_FATContext *context){
     }
     else
         SAL_read(context->device, sizeof(t_BootSectorCommonExt), offset, &context->old_ext);
+}
+
+/**
+ * creates a file named "HELLO.TXT"
+ *  in the root directory
+ */
+void FAT_test(t_FATContext *context){
+    t_ShortDirEntry entry = {
+        .name = {
+            'H', 'E', 'L', 'L', 'O', ' ', ' ', ' ', 'T', 'X', 'T'
+        },
+        .attributes = 0,
+        .reserved = 0,
+        .creation_tenths = 0,
+        .creation_time = 0,
+        .creation_date = 0,
+        .last_access_date = 0,
+
+        .first_cluster_high = 0,
+
+        .last_write_time = 0,
+        .last_write_date = 0,
+
+        .first_cluster_low = FindFreeCluster(context),
+        .file_size = 512
+    };
+
+    for (uint8_t i = 0; i < context->boot_sector.num_fat; ++i)
+        FAT_set_entry(context, i, entry.first_cluster_low, 0xFFF);
+
+    size_t root_dir_off = RootDirSector(context) * context->boot_sector.bytes_per_sector;
+
+    SAL_write(context->device, sizeof(t_ShortDirEntry), root_dir_off, &entry); 
 }

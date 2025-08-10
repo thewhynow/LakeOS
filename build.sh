@@ -14,6 +14,10 @@
 #       debug                                                            #
 #             build with debug flags and launch qemu on pause            #
 #             qemu pauses waiting for GDB server connection              #
+#       debug-fat                                                        #
+#             create a 1.44MB 3.5" floppy-disk image initialized to 0    #
+#             format it as a FAT filesystem                              #
+#             virtually mount the image on the next available drive      #
 #       log                                                              #
 #             pass flags to qemu to log CPU state when interrupt raised  #
 ##########################################################################
@@ -34,11 +38,11 @@ x_flags="-std=c++98 -ffreestanding -D_KERNEL_LIBC -nostdlib -O0 -w"
 c_flags="-std=gnu99 -ffreestanding -D_KERNEL_LIBC -nostdlib -O0 -w"
 s_flags=""
 q_flags=" -m 512"
-q_flags+=" -drive file=lakeos.iso,format=raw,index=0,if=ide"
-
-# start at 1 since boot disk uses drive 0 #
+q_flags+=" -cdrom lakeos.iso"
 
 f_index=0
+
+# start at 1 since boot disk uses drive 0 #
 h_index=1
 
 for arg in $@; do
@@ -62,6 +66,12 @@ for arg in $@; do
             dd if=/dev/zero of=harddisk${h_index}.img bs=1M count=1
             q_flags+=" -drive file=harddisk${h_index}.img,format=raw,index=${h_index},if=ide"
             ((h_index++))
+            ;;
+        "debug-fat")
+            dd if=/dev/zero of=floppy.img bs=512 count=2880
+            mformat -i floppy.img ::
+            q_flags+=" -drive file=floppy.img,format=raw,index=${f_index},if=floppy"
+            ((f_index++))
             ;;
     esac
 done
