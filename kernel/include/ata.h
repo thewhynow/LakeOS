@@ -144,7 +144,7 @@ void    IDE_write(uint8_t channel, ATA_REG_PORT_OFFSETS reg, uint8_t data);
 uint8_t IDE_ATA_write(uint8_t drive, uint32_t lba, void *buff);
 uint8_t IDE_ATA_read (uint8_t drive, uint32_t lba, void *buff);
 
-#define IDE_ATA_SECTOR_SIZE 256
+#define IDE_ATA_SECTOR_SIZE 512
 
 void ATA_write_sector(storage_device_t *device, const void *buff, uint32_t lba);
 void ATA_read_sector (storage_device_t *device, void *buff, uint32_t lba);

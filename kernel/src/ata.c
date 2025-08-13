@@ -291,11 +291,11 @@ void IDE_ATA_operation(uint8_t direction, uint8_t drive, uint32_t lba, uint16_t 
     
     /* write */
     if (direction)
-        for (int i = 0; i < IDE_ATA_SECTOR_SIZE; ++i)
+        for (int i = 0; i < IDE_ATA_SECTOR_SIZE / 2; ++i)
             port_write_word(channels[channel].IO_base, buff[i]);
     /* read */
     else {
-        for (int i = 0; i < IDE_ATA_SECTOR_SIZE; ++i)
+        for (int i = 0; i < IDE_ATA_SECTOR_SIZE / 2; ++i)
             buff[i] = port_read_word(channels[channel].IO_base);
 
         static char commands[] = {

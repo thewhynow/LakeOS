@@ -13,6 +13,9 @@ void* memmove(void*, const void*, size_t);
 void* memset(void*, int, size_t);
 int strlen(const char*);
 char* strncat(char* __restrict, const char* __restrict, size_t);
+char *strchr(char *str, int chr);
+char *strpbrk(char *str, char *sep);
+char *strtok(char *str, char *sep);
 
 #ifdef __cplusplus
 }

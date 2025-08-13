@@ -38,7 +38,7 @@ x_flags="-std=c++98 -ffreestanding -D_KERNEL_LIBC -nostdlib -O0 -w"
 c_flags="-std=gnu99 -ffreestanding -D_KERNEL_LIBC -nostdlib -O0 -w"
 s_flags=""
 q_flags=" -m 512"
-q_flags+=" -cdrom lakeos.iso"
+q_flags+=" -cdrom lakeos.iso -boot d"
 
 f_index=0
 
@@ -67,12 +67,17 @@ for arg in $@; do
             q_flags+=" -drive file=harddisk${h_index}.img,format=raw,index=${h_index},if=ide"
             ((h_index++))
             ;;
-        "debug-fat")
-            dd if=/dev/zero of=floppy.img bs=512 count=2880
-            mformat -i floppy.img ::
-            q_flags+=" -drive file=floppy.img,format=raw,index=${f_index},if=floppy"
-            ((f_index++))
+        "debug-fat-hd")
+            dd if=/dev/zero of=fat.img bs=1M count=1
+            mformat -i fat.img ::
+            q_flags+=" -drive file=fat.img,format=raw,index=${h_index},if=ide"
+            ((h_index++))
             ;;
+        "debug-fat-fd")
+            dd if=/dev/zero of=fat.img bs=512 count=2880
+            mformat -i fat.img ::
+            q_flags+=" -drive file=fat.img,format=raw,index=${f_index},if=floppy"
+            ((f_index++))
     esac
 done
 
@@ -109,6 +114,10 @@ $compiler_path -c libc/string/memmove.c   -o memmove.o    $c_flags
 $compiler_path -c libc/string/memset.c    -o memset.o     $c_flags
 $compiler_path -c libc/string/strlen.c    -o strlen.o     $c_flags
 $compiler_path -c libc/string/strncat.c   -o strncat.o    $c_flags
+$compiler_path -c libc/string/strchr.c    -o strchr.o     $c_flags
+$compiler_path -c libc/string/strtok.c    -o strtok.o     $c_flags
+$compiler_path -c libc/string/strpbrk.c   -o strpbrk.o    $c_flags
+
 
 $assemble_path kernel/asm/boot.s          -o boot.o       $s_flags
 $assemble_path kernel/asm/crti.s          -o crti.o       $s_flags
@@ -123,7 +132,7 @@ $compiler_path -T kernel/linker.ld -o iso/boot/lakeos.elf $c_flags -lgcc *.o
 rm *.o
 
 $grub_iso_path -o lakeos.iso iso
-
+echo $q_flags
 qemu-system-i386 $q_flags
 
 rm lakeos.iso

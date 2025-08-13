@@ -1,16 +1,14 @@
 #define _FAT_H_INTERNAL
 #include "../include/fat.h"
 #include "../include/sal.h"
-#include "../include/pmm.h"
-#include "../include/vmm.h"
-#include "../../libc/include/stdio.h"
 #include "../../libc/include/stdlib.h"
 #include "../../libc/include/string.h"
+#include "../../libc/include/stdio.h"
 
 /**
  * initializes context with the FAT type, assumes that
  * all relevant data from the BPB have been read from disk;
- */
+*/
 void FAT_init_type(t_FATContext *context) {
     t_BootSectorCommon *boot_sec = &context->boot_sector;
     
@@ -290,7 +288,7 @@ void LongToShortName(char *long_name, char *short_name){
  * determines the type of directory entry
  * returns DIR_ENTRY_INVALID on failure / invalid entry
  */
-e_DirEntryType DirEntryType(const t_LongDirEntry *entry){
+e_LongDirEntryType DirEntryType(const t_LongDirEntry *entry){
     if ((entry->attribute & ENTRY_ATTR_MASK_LONG_NAME) == ENTRY_ATTR_LONG_NAME && entry->order != 0xE5)
         return DIR_ENTRY_LONG_NAME;
 
@@ -327,7 +325,8 @@ size_t RootDirSector(t_FATContext *context){
  * returns 0 on failure
  */
 uint32_t FindFreeCluster(t_FATContext *context){
-    for (size_t i = 2; i < context->boot_sector.num_sectors * context->boot_sector.sectors_per_cluster; ++i){
+    size_t num_clusters = context->boot_sector.num_sectors * context->boot_sector.sectors_per_cluster;
+    for (size_t i = 2; i < num_clusters; ++i){
         uint32_t entry = FAT_get_entry(context, 0, i);
         
         if (!entry) return i;
@@ -345,7 +344,10 @@ uint32_t FindFreeCluster(t_FATContext *context){
  *  context->partition_start is set
  */
 void FAT_context_init(t_FATContext *context){
-    SAL_read(context->device, sizeof(t_BootSectorCommon), 0 + context->partition_start, &context->boot_sector);
+    SAL_read(
+        context->device, sizeof(t_BootSectorCommon), 
+        0 + context->partition_start, &context->boot_sector
+    );
 
     /* validate that it is FAT */
 
@@ -359,6 +361,15 @@ void FAT_context_init(t_FATContext *context){
     }
 
     FAT_init_type(context);
+
+    /* round up */
+    uint32_t root_sectors = (context->boot_sector.num_root_entries * 32 + context->boot_sector.bytes_per_sector - 1) 
+                            / context->boot_sector.bytes_per_sector;
+
+    context->data_region_start  = context->boot_sector.reserved_sectors;
+    context->data_region_start += context->boot_sector.num_fat * context->boot_sector.sectors_per_fat;
+    context->data_region_start += root_sectors;
+    context->data_region_start *= context->boot_sector.bytes_per_sector;
 
     size_t offset = sizeof(t_BootSectorCommon);
 
@@ -380,31 +391,264 @@ void FAT_context_init(t_FATContext *context){
  * creates a file named "HELLO.TXT"
  *  in the root directory
  */
-void FAT_test(t_FATContext *context){
+void FAT_test(t_FATContext *ctx){
+    FAT_create(ctx, "/MYDIR", ENTRY_ATTR_DIRECTORY);
+    FAT_create(ctx, "/MYDIR/HELLO.TXT", 0);
+
+    printf("/MYDIR found @ cluster %d\n", FAT_file_cluster(ctx, "/MYDIR"));
+    printf("/MYDIR/HELLO.TXT found @ cluster %d\n", FAT_file_cluster(ctx, "/MYDIR/../MYDIR/HELLO.TXT"));
+}
+
+/**
+ * returns the final offset for file offset
+ *  offset, for a file starting at cluster
+ * 
+ * follows the FAT cluster chain.. essentially
+ */
+uint32_t FAT_absolute_offset(t_FATContext *ctx, uint32_t cluster, size_t offset, uint32_t *clus_fail){
+    size_t bytes_per_cluster = ctx->boot_sector.sectors_per_cluster * ctx->boot_sector.bytes_per_sector;
+
+    if (cluster < 2)
+        return RootDirSector(ctx) * ctx->boot_sector.bytes_per_sector + offset;
+
+    if (offset < bytes_per_cluster)
+        return FAT_clus_to_off(ctx, cluster) + offset;
+    
+    while (offset > bytes_per_cluster){
+        uint32_t entry = FAT_get_entry(ctx, 0, cluster);
+
+        if (FAT_is_eoc(ctx, entry)){
+            if (clus_fail) *clus_fail = cluster;
+            return 0;
+        }
+
+        cluster = entry;
+
+        offset -= bytes_per_cluster;
+    }
+
+    return cluster * bytes_per_cluster + offset;
+}
+
+/**
+ * reads entry_num entry from the directory
+ *  starting at cluster into out_entry
+ *
+ * on success, returns 0
+ * on failure, returns the last cluster that
+ *  was allocated by the cluster chain
+ */
+uint32_t FAT_dir_entry(t_FATContext *ctx, uint32_t cluster, uint32_t entry_num, void *out_entry){
+    size_t entry_offset = entry_num * sizeof(t_ShortDirEntry);
+    uint32_t last_free_cluster;
+
+    size_t final_offset = FAT_absolute_offset(ctx, cluster, entry_offset, &last_free_cluster);
+    if (final_offset){
+        SAL_read(ctx->device, sizeof(t_ShortDirEntry), final_offset, out_entry);
+        return 0;
+    }
+    else
+        return last_free_cluster;
+}
+
+/**
+ * converts a cluster number to a disk
+ *  offset, treats cluster 0 as root 
+ */
+size_t FAT_clus_to_off(t_FATContext *ctx, uint32_t cluster){
+    if (cluster > 1)
+        return ctx->data_region_start + 
+            (cluster - 2) * ctx->boot_sector.sectors_per_cluster * ctx->boot_sector.bytes_per_sector;
+    else
+        return RootDirSector(ctx) * ctx->boot_sector.bytes_per_sector;
+}
+
+bool FAT_is_root(t_FATContext *ctx, uint32_t cluster){
+	if (ctx->type != FAT_32)
+		return cluster < 2;
+     
+     size_t root_off = RootDirSector(ctx) * ctx->boot_sector.bytes_per_sector;
+     size_t clus_off = FAT_clus_to_off(ctx, cluster);
+
+     return  !!FAT_absolute_offset(ctx, 0, clus_off - root_off, NULL);
+}
+
+/**
+ * finds a file in the directory
+ *  starting at cluster and returns
+ *  the cluster number of the file,
+ *  -1 on file-not-found
+ */
+uint32_t FAT_find_file(t_FATContext *ctx, uint32_t cluster, const char *_name){
+    int eoc = 0, 
+    entry_num = 0; 
+    
+    t_ShortDirEntry entry;
+
+    eoc = FAT_dir_entry(ctx, cluster, entry_num, &entry);
+   
+    char name[11];
+    FAT_conv_fname(_name, name);
+
+    while (!eoc && memcmp(entry.name, name, 11)){
+        ++entry_num;
+        eoc = FAT_dir_entry(ctx, cluster, entry_num, &entry);	
+    }
+    
+    if (eoc)
+        return -1;
+    else
+        return entry.first_cluster_low;
+}
+
+/**
+ * returns the cluster number of the specified file
+ *  since directories are just files, this function
+ *  also handles them and returns the cluster number
+ *  of the directory
+ * in the root directory special case on FAT12/16,
+ *  this function returns 0 as the cluster number
+ */
+uint32_t FAT_file_cluster(t_FATContext *ctx, const char *_path){
+     
+    static char path[0xFFF];
+    memset(path, 0, 0xFFF);
+    memcpy(path, _path, strlen(_path));
+
+    uint32_t clus =  ctx->type == FAT_32
+         ? ctx->fat32_ext.root_cluster_num
+         : 0;
+
+    char *name = strtok(path, "/");
+
+    while (name){
+        clus = FAT_find_file(ctx, clus, name);
+
+        if (clus == 0xFFFFFFFF)
+            return -1;
+
+        name = strtok(NULL, "/");
+    }
+
+    return clus;
+}
+
+void FAT_write_entry(t_FATContext *ctx, uint32_t cluster, void *entry){
+    int entry_num = 0;
+    t_ShortDirEntry read_entry;
+    int eoc = FAT_dir_entry(ctx, cluster, entry_num, &read_entry);   
+
+    for (; !eoc; ++entry_num){
+        retry_search:
+
+        eoc = FAT_dir_entry(ctx, cluster, entry_num, &read_entry);
+        if (read_entry.name[0] == 0x00 || read_entry.name[0] == 0xE5){
+            size_t offset = FAT_clus_to_off(ctx, cluster) + entry_num * sizeof(t_ShortDirEntry); 
+            SAL_write(ctx->device, sizeof(t_ShortDirEntry), offset, entry);
+            return;
+        }
+    }
+
+    /* reaching this point means a new cluster needs to be allocated */
+    
+    uint32_t new_cluster = FindFreeCluster(ctx);
+
+    for (int i = 0; i < ctx->boot_sector.num_fat; ++i)
+        FAT_set_entry(ctx, i, eoc, new_cluster);
+
+    eoc = 0;
+
+    goto retry_search;
+}
+
+/**
+ * assumes out is a 
+ * string that contains at minimum
+ * 11 characters
+ */
+void FAT_conv_fname(const char *name, char *out){
+    int i = 0;
+    int l = strlen(name);
+   
+    /* handle '.' and '..' special case */
+    if (name[0] == '.' && l < 3){
+        memcpy(out, name, l);
+        memset(out + l, ' ', 11 - l);
+        return;
+    }
+
+    for (; i < l && i < 8 && name[i] != '.'; ++i)
+        out[i] = name[i];
+    
+    int j = i;
+    for (; j < 8; ++j)
+        out[j] = ' ';
+
+    ++i;
+
+    for (; i < l && i < 11; ++i, ++j)
+        out[j] = name[i];
+
+    for (; j < 11; ++j)
+        out[j] = ' ';
+}
+
+
+/* FUNCTIONS DEFINED BELOW THIS SUBHEADING ARE FOR THE VFS API */
+
+/**
+ * this function creates a file mentioned by the specified path
+ *  doesn't do m(any) sanity checks and will silently (or very loudly)
+ *  fail if YOU fuck something up in the parameters !!
+ */
+void FAT_create(t_FATContext *ctx, const char *_path, uint32_t attribs){
+    char path[0xFFF]; 
+    memcpy(path, _path, strlen(_path));
+    
+    int fname_begin = 0;
+    for (int i = 0; path[i]; ++i)
+        if (path[i] == '/')
+            fname_begin = i;
+    
+    path[fname_begin++] = '\0';
+
+    /* get the cluster of the parent directory */
+    uint32_t dir_cluster = FAT_file_cluster(ctx, path);
+
+    char fname[11];
+    FAT_conv_fname(path + fname_begin, fname);
+
     t_ShortDirEntry entry = {
-        .name = {
-            'H', 'E', 'L', 'L', 'O', ' ', ' ', ' ', 'T', 'X', 'T'
-        },
-        .attributes = 0,
+        .attributes = attribs,
         .reserved = 0,
         .creation_tenths = 0,
         .creation_time = 0,
         .creation_date = 0,
         .last_access_date = 0,
-
         .first_cluster_high = 0,
-
         .last_write_time = 0,
         .last_write_date = 0,
-
-        .first_cluster_low = FindFreeCluster(context),
-        .file_size = 512
+        .first_cluster_low = FindFreeCluster(ctx),
+        .file_size = ctx->boot_sector.bytes_per_sector * ctx->boot_sector.sectors_per_cluster
     };
 
-    for (uint8_t i = 0; i < context->boot_sector.num_fat; ++i)
-        FAT_set_entry(context, i, entry.first_cluster_low, 0xFFF);
+    memcpy(entry.name, fname, 11);
+    FAT_write_entry(ctx, dir_cluster, &entry);
 
-    size_t root_dir_off = RootDirSector(context) * context->boot_sector.bytes_per_sector;
+    for (uint16_t i = 0; i < ctx->boot_sector.num_fat; ++i)
+        FAT_set_entry(ctx, i, entry.first_cluster_low, 0xFFFFFFFF);
 
-    SAL_write(context->device, sizeof(t_ShortDirEntry), root_dir_off, &entry); 
+    /* creating '.' and '..' entries in directories */
+    if (attribs | ENTRY_ATTR_DIRECTORY){
+        memcpy(entry.name, ".          ", 11);
+        
+        FAT_write_entry(ctx, entry.first_cluster_low, &entry);
+
+        uint32_t clus = entry.first_cluster_low;
+
+        entry.name[1] = '.';
+        entry.first_cluster_low = dir_cluster;
+
+        FAT_write_entry(ctx, clus, &entry);
+    }
 }

@@ -297,6 +297,12 @@ typedef struct {
     storage_device_t     *device;
 
     /**
+     * marks the start of the data region
+     *  defined by the clusters
+     */
+    uint32_t             data_region_start;
+
+    /**
      * even though this field does exist, do not
      *  make the mistake assuming that this field 
      *  is actually used in offset calculations!
@@ -381,7 +387,7 @@ static const t_TotalSectors_SectorsPerCluster FAT32_NUM_SECTORS_TO_SECTORS_PER_C
 
 
  /**
-  * upper two bits of byte are reserved and should be set to 0
+  * upper two bits of attrib byte are reserved and should be set to 0
   */
 typedef enum {
     /* writes to the file should fail */
@@ -563,12 +569,41 @@ typedef enum {
     DIR_ENTRY_FILE,
     DIR_ENTRY_DIRECTORY,
     DIR_ENTRY_VOL_LABEL,
-} e_DirEntryType;
+} e_LongDirEntryType;
 
 void FAT_context_init(t_FATContext *context);
 void FAT_test(t_FATContext *context);
 
+void FAT_create(t_FATContext *ctx, const char *_path, uint32_t attribs);
+
+uint32_t FAT_absolute_offset(t_FATContext *ctx, uint32_t cluster, size_t offset, uint32_t *clus_fail);
+
+uint32_t FAT_dir_entry(t_FATContext *ctx, uint32_t cluster, uint32_t entry_num, void *out_entry);
+
+size_t FAT_clus_to_off(t_FATContext *ctx, uint32_t cluster);
+
+uint32_t FAT_find_file(t_FATContext *ctx, uint32_t cluster, const char *name);
+
+uint32_t FAT_file_cluster(t_FATContext *ctx, const char *_path);
+
+/**
+ * returns true if the given cluster
+ *  is within the root directory
+ * on FAT12/16, clusters 0 and 1 are
+ *  treated as root directory clusters
+ */
+bool FAT_is_root(t_FATContext *ctx, uint32_t cluster);
+
+/**
+ * finds a free entry in the directory
+ *  starting at cluster and writes
+ *  entry into it
+ */
+void FAT_write_entry(t_FATContext *ctx, uint32_t cluster, void *entry);
+
+void FAT_conv_fname(const char *name, char *out);
 #endif
+
 
 
 #endif
