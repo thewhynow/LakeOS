@@ -98,6 +98,12 @@ void *vmm_map_page(void *paddr, void *vaddr);
  */
 void *valloc_page(void *vaddr);
 
+void *vmm_map_big_page(void *paddr, void *vaddr);
+
+void vfree_page(void *vaddr);
+
+void *valloc_big_page(void* vaddr);
+
 #ifdef __cplusplus
 }
 #endif

@@ -53,6 +53,18 @@ static bool printlong(long n){
     return true;
 }
 
+static void printptr(void *ptr){
+ uint32_t p = (uint32_t)(size_t)ptr;
+    const char hex[] = "0123456789ABCDEF";
+
+    putchar('0');
+    putchar('x');
+    for (int i = 7; i >= 0; i--) {
+        putchar(hex[(p >> (i * 4)) & 0xF]);
+    }
+}
+
+
 int printf(const char* restrict format, ...){
     va_list params;
     va_start(params, format);
@@ -96,14 +108,8 @@ int printf(const char* restrict format, ...){
                 }
 
                 case 'p': {
-                    long p = va_arg(params, long);
-                    printlong(p);
-
-                    do {
-                        ++bytes_written;
-                        p /= 10;
-                    } while(p);
-
+                    void *p = va_arg(params, void*);
+                    printptr(p);
                     break;
                 }
 

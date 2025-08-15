@@ -13,6 +13,7 @@
 #include "../include/sal.h"
 #define _FAT_H_INTERNAL
 #include "../include/fat.h"
+#include "../include/kmm.h"
 
 void kernel_main() {
     terminal_init();
@@ -37,6 +38,9 @@ void kernel_main() {
     printf("Loading VMM...");
     VMM_init();
     printf("VMM Loaded!\n");
+    printf("Loading KMM...");
+    KMM_init();
+    printf("KMM Loaded!\n");
     printf("Loading SAL...");
     SAL_init();
     printf("SAL Loaded!\n");

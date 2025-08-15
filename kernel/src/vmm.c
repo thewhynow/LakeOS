@@ -1,6 +1,7 @@
 #include "../include/vmm.h"
 #include "../include/pmm.h"
 #include "../../libc/include/string.h"
+#include "../include/isr.h"
 
 #define ENTRIES_PER_STRUCT 1024
 
@@ -46,6 +47,18 @@ static void flush_tlb_entry(vaddr_t vaddr){
         "invlpg (%0)\n"
         "sti\n"
     :: "r"(vaddr) : "memory");
+}
+
+void *vmm_map_big_page(void *paddr, void *vaddr){
+    pd_entry_t *pde = &page_directory.entries[PAGE_DIR_INDEX((size_t)vaddr)];
+
+    ENTRY_ADD_ATTRIBUTE(*pde, PAGE_STRUCT_ENTRY_PRESENT);
+    ENTRY_ADD_ATTRIBUTE(*pde, PAGE_STRUCT_ENTRY_WRITEABLE);
+    ENTRY_SET_FRAME(*pde, (size_t)paddr);
+
+    flush_tlb_entry((size_t)vaddr);
+
+    return vaddr;
 }
 
 void *vmm_map_page(void *paddr, void *vaddr){
@@ -94,6 +107,31 @@ void *valloc_page(void *vaddr){
     return vmm_map_page(page, vaddr ? vaddr : page);
 }
 
+void *valloc_big_page(void *vaddr){
+    void *page = alloc_pages(0x400);
+    
+    return vmm_map_big_page(page, vaddr ? vaddr : page);
+}
+
+void vfree_page(void *vaddr){
+    pd_entry_t *pdir_entry = &page_directory.entries[PAGE_DIR_INDEX((size_t)vaddr)];
+    
+    /* page table will be mapped to 0xC03FF000 */
+    ptable_t *ptable = (ptable_t*) 0xC03FF000;
+
+    /* used to map the page table into memory */
+    pt_entry_t *map_ptable_entry = &higher_half_page_table.entries[PAGE_TABLE_INDEX(0xC03FF000)];     
+ 
+    /* map the page table */
+    ENTRY_SET_FRAME(*map_ptable_entry, PTE_FROM_PDIR(pdir_entry));
+    flush_tlb_entry(0xC03FF000);
+
+    /* get the page table entry from the page table */
+    pt_entry_t *pte = &ptable->entries[PAGE_TABLE_INDEX((size_t)vaddr)];
+    
+    ENTRY_DEL_ATTRIBUTE(*pte, PAGE_STRUCT_ENTRY_PRESENT);
+}
+
 void VMM_init() {
     
     extern uint8_t *bitmap;
@@ -116,4 +154,17 @@ void VMM_init() {
     bitmap += 0xC0000000;
     
     flush_pd();
+}
+
+void ISR_page_flt_handler(registers_t *regs){
+    uint64_t fault_addr;
+
+    asm volatile (
+        "movl %%cr2, %0"
+        : "=r"(fault_addr) ::
+    );
+    
+    /* page is in kernel heap */
+    if (0xD0000000 < fault_addr && fault_addr < 0xE0000000)
+        valloc_page((void*) fault_addr);
 }

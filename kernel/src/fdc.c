@@ -12,6 +12,7 @@ static bool floppy_irq_fired;
 
 uint8_t  current_drive;
 void     *buff_paddr;
+void     *buff_vaddr;
 
 static bool drives_present[] = {
     [0] = false,
@@ -130,9 +131,9 @@ void FDC_init(){
     current_drive = 0;
 
     /* map the buffer so we can access it */
-    vmm_map_page(buff_paddr, buff_paddr);
+    buff_vaddr = vmm_map_page(buff_paddr, buff_paddr + 0xC0000000);
 
-    memset(buff_paddr, 'A', 4095);
+    memset(buff_vaddr, 'A', 4095);
 
     PIC_unmask(FLOPPY_IRQ);
     FDC_set_drive(0);
@@ -195,13 +196,13 @@ void FDC_read_sector(storage_device_t *device, void *buff, uint32_t lba){
 
     FDC_stop_motor();
 
-    memcpy(buff, (void*) buff_paddr, FLOPPY_BYTES_PER_SECTOR);
+    memcpy(buff, (void*) buff_vaddr, FLOPPY_BYTES_PER_SECTOR);
 }
 
 void FDC_write_sector(storage_device_t *device, const void *buff, uint32_t lba){
     current_drive = device->drive_num;
     
-    memcpy((void*)buff_paddr, buff, FLOPPY_BYTES_PER_SECTOR);
+    memcpy((void*)buff_vaddr, buff, FLOPPY_BYTES_PER_SECTOR);
 
     uint8_t head, cylinder, sector;
 

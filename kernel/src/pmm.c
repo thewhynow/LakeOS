@@ -12,7 +12,7 @@ size_t bitmap_len;
 #define bitmap_getblockstate(num)             \
     ((bitmap[(num) / 8] >> ((num) % 8)) & 0x1)
 
-void bitmap_setblockstate(size_t block_num, uint8_t state){
+static void bitmap_setblockstate(size_t block_num, uint8_t state){
     if (state)
         bitmap[block_num / 8] |= 0x1 << (block_num % 8);
     else 
@@ -21,7 +21,7 @@ void bitmap_setblockstate(size_t block_num, uint8_t state){
 
 extern uint8_t _begin, _end;
 
-bool region_in_kernel(mmap_entry_t *region){
+static bool region_in_kernel(mmap_entry_t *region){
     uint32_t region_begin = region->address_low;
     uint32_t region_end   = region->address_low + region->length_low;
 
@@ -29,7 +29,7 @@ bool region_in_kernel(mmap_entry_t *region){
 }
 
 /* assumes region_in_kernel(region) == TRUE */
-void shrink_region_around_kernel(mmap_entry_t *region){
+static void shrink_region_around_kernel(mmap_entry_t *region){
     uint32_t region_begin = region->address_low;
     uint32_t region_end   = region->address_low + region->length_low;
 

@@ -256,6 +256,59 @@ void ISR253();
 void ISR254();
 void ISR255();
 
+void ISR_page_flt_handler(registers_t *regs);
+
+ISR_handler_t handlers[256];
+
+void ISR_init(){
+    void ISR_init_gates();
+    ISR_init_gates();
+    handlers[14] = ISR_page_flt_handler;
+    for (int i = 0; i < 256; ++i)
+        IDT_enablegate(i);
+}
+
+void kernelpanic(){
+    asm(
+        "cli\n"
+        "hlt\n"
+    );
+}
+
+static const char* exception_msgs[32];
+
+void ISR_handler(registers_t* regs){
+    if (handlers[regs->int_num])
+        handlers[regs->int_num](regs); else
+    if (regs->int_num >= 32) {
+        printf("undefined interrupt %i, kernel panic!\n", regs->int_num);
+        kernelpanic();
+    }
+    /* exception */
+    else {
+        printf("undefined exception %i: %s\n", regs->int_num, exception_msgs[regs->int_num]);
+        printf(
+        "eax = %i\n"
+        "ebx = %i\n"
+        "ecx = %i\n"
+        "edx = %i\n"
+        "esi = %i\n"
+        "edi = %i\n"
+        "esp = %i\n"
+        "ebp = %i\n"
+        "eip = %i\n"
+        "eflags = %i\n"
+        "cs = %i\n"
+        "ds = %i\n"
+        "ss = %i\n"
+        "errorcode = %i\n",
+        regs->eax, regs->ebx, regs->ecx, regs->edx, regs->esi, regs->edi,
+        regs->esp, regs->ebp, regs->eip, regs->eflags, regs->cs, regs->ds, 
+        regs->ss, regs->error);
+        kernelpanic();
+    }
+}
+
 void ISR_init_gates(){
     IDT_setgate(0, ISR0, GDT_CODE_SEGMENT, IDT_FLAG_RING0 | IDT_FLAG_GATE_32BIT_INT);
     IDT_setgate(1, ISR1, GDT_CODE_SEGMENT, IDT_FLAG_RING0 | IDT_FLAG_GATE_32BIT_INT);
@@ -515,55 +568,6 @@ void ISR_init_gates(){
     IDT_setgate(255, ISR255, GDT_CODE_SEGMENT, IDT_FLAG_RING0 | IDT_FLAG_GATE_32BIT_INT);
 }
 
-ISR_handler_t handlers[256];
-
-void ISR_init(){
-    ISR_init_gates();
-    for (int i = 0; i < 256; ++i)
-        IDT_enablegate(i);
-}
-
-void kernelpanic(){
-    asm(
-        "cli\n"
-        "hlt\n"
-    );
-}
-
-static const char* exception_msgs[32];
-
-void ISR_handler(registers_t* regs){
-    if (handlers[regs->int_num])
-        handlers[regs->int_num](regs); else
-    if (regs->int_num >= 32) {
-        printf("undefined interrupt %i, kernel panic!\n", regs->int_num);
-        kernelpanic();
-    }
-    /* exception */
-    else {
-        printf("undefined exception %i: %s\n", regs->int_num, exception_msgs[regs->int_num]);
-        printf(
-        "eax = %i\n"
-        "ebx = %i\n"
-        "ecx = %i\n"
-        "edx = %i\n"
-        "esi = %i\n"
-        "edi = %i\n"
-        "esp = %i\n"
-        "ebp = %i\n"
-        "eip = %i\n"
-        "eflags = %i\n"
-        "cs = %i\n"
-        "ds = %i\n"
-        "ss = %i\n"
-        "errorcode = %i\n",
-        regs->eax, regs->ebx, regs->ecx, regs->edx, regs->esi, regs->edi,
-        regs->esp, regs->ebp, regs->eip, regs->eflags, regs->cs, regs->ds, 
-        regs->ss, regs->error);
-        kernelpanic();
-    }
-}
-
 static const char* exception_msgs[32] = {
     "Divide by zero error",
     "Debug",
@@ -598,3 +602,4 @@ static const char* exception_msgs[32] = {
     "Security Exception",
     ""
 };
+

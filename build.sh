@@ -99,6 +99,7 @@ $compiler_path -c kernel/src/fdc.c        -o fdc.o        $c_flags
 $compiler_path -c kernel/src/ata.c        -o ata.o        $c_flags
 $compiler_path -c kernel/src/sal.c        -o sal.o        $c_flags
 $compiler_path -c kernel/src/fat.c        -o fat.o        $c_flags
+$compiler_path -c kernel/src/kmm.c        -o kmm.o        $c_flags
 
 $compiler_path -c libc/stdio/printf.c     -o printf.o     $c_flags
 $compiler_path -c libc/stdio/putchar.c    -o putchar.o    $c_flags
