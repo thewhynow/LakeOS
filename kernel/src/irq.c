@@ -1,5 +1,9 @@
 #include "../include/irq.h"
 
+void IRQ_time_handler();
+void IRQ_keyboard_handler();
+void IRQ_FDC_handler();
+
 IRQ_handler_t IRQ_handlers[16] = {
     [0] = IRQ_time_handler,
     [1] = IRQ_keyboard_handler,

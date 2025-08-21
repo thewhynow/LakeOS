@@ -312,7 +312,7 @@ static void FDC_start_motor(uint8_t drive){
     }
 
     /* give motor time to start up */
-    PIT_sleep(50);
+    // PIT_sleep(50);
 }
 
 static void FDC_stop_motor(){

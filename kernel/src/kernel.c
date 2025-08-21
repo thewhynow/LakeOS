@@ -11,9 +11,9 @@
 #include "../include/fdc.h"
 #include "../include/ata.h"
 #include "../include/sal.h"
-#define _FAT_H_INTERNAL
 #include "../include/fat.h"
 #include "../include/kmm.h"
+#include "../include/rtc.h"
 
 void kernel_main() {
     terminal_init();
@@ -29,6 +29,9 @@ void kernel_main() {
     printf("Loading IRQ...");
     IRQ_init();
     printf("IRQ Loaded!\n");
+    printf("Loading RTC...");
+    RTC_init();
+    printf("RTC Loaded!\n");
     printf("Loading PIT...");
     PIT_init();
     printf("PIT Loaded!\n");
@@ -58,20 +61,30 @@ void kernel_main() {
     for (int i = 0; i < (int) num_devices; ++ i)
         printf("Device %i name: %s\n", i, devices[i].name);
 
-    t_FATContext ctx = (t_FATContext){ .device = devices + 0, .partition_start = 0 };
-    FAT_context_init(&ctx);
+    t_FATContext *ctx = FAT_context_init(devices + 0);
+    FAT_create(ctx, "/FILE.TXT", 0);   
 
-    FAT_test(&ctx);
+    t_FATFile *file = FAT_open(ctx, "/FILE.TXT", FAT_FILE_WRITE);
+    FAT_write(file, 13, "Hello, World!");
+    FAT_close(file);
+
+    for (int i = 0; i < 60; ++i){
+        printf("waiting %d seconds\n", i);
+        PIT_sleep(1000);
+    }
+    
+    printf("the date is %d/%d/%d\n", time.month, time.monthday, time.year);
+    printf("the time is %d:%d:%d\n", time.hours, time.minutes,  time.seconds);
 
     printf("Welcome to lakeOS!\n");
     
-    char *string = valloc_page(NULL);
+    char *string = kmalloc(100);
     
     while (1) {
         memset(string, 0, 100);
         gets(string);
         printf("string: %s\n", string);
-
+	
         if (!memcmp(string, "quit", 4))
             for (;;);
     }

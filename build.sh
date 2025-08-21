@@ -34,8 +34,8 @@ else
     grub_iso_path="grub-mkrescue"
 fi
 
-x_flags="-std=c++98 -ffreestanding -D_KERNEL_LIBC -nostdlib -O0 -w"
-c_flags="-std=gnu99 -ffreestanding -D_KERNEL_LIBC -nostdlib -O0 -w"
+x_flags="-std=c++98 -ffreestanding -D_KERNEL_LIBC -nostdlib -O0 -w -g"
+c_flags="-std=gnu99 -ffreestanding -D_KERNEL_LIBC -nostdlib -O0 -w -g"
 s_flags=""
 q_flags=" -m 512"
 q_flags+=" -cdrom lakeos.iso -boot d"
@@ -100,6 +100,7 @@ $compiler_path -c kernel/src/ata.c        -o ata.o        $c_flags
 $compiler_path -c kernel/src/sal.c        -o sal.o        $c_flags
 $compiler_path -c kernel/src/fat.c        -o fat.o        $c_flags
 $compiler_path -c kernel/src/kmm.c        -o kmm.o        $c_flags
+$compiler_path -c kernel/src/rtc.c        -o rtc.o        $c_flags
 
 $compiler_path -c libc/stdio/printf.c     -o printf.o     $c_flags
 $compiler_path -c libc/stdio/putchar.c    -o putchar.o    $c_flags

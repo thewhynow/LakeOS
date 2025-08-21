@@ -1,6 +1,8 @@
 #define _FAT_H_INTERNAL
 #include "../include/fat.h"
 #include "../include/sal.h"
+#include "../include/kmm.h"
+#include "../include/rtc.h"
 #include "../../libc/include/stdlib.h"
 #include "../../libc/include/string.h"
 #include "../../libc/include/stdio.h"
@@ -69,7 +71,7 @@ uint32_t FAT_set_entry(t_FATContext *context, uint8_t fat_num, uint32_t cluster,
     offset += fat_num * SECTORS_PER_FAT(context) * context->boot_sector.bytes_per_sector;
     offset += FAT_get_offset(context, cluster);
 
-    uint32_t entry;
+    uint32_t entry = 0;
 
     switch(context->type){
         case FAT_12: {
@@ -115,6 +117,11 @@ uint32_t FAT_set_entry(t_FATContext *context, uint8_t fat_num, uint32_t cluster,
     return data;
 }
 
+static void FAT_set_entries(t_FATContext *ctx, uint32_t num, uint32_t data){
+    for (uint8_t i = 0; i < ctx->boot_sector.num_fat; ++i)
+        FAT_set_entry(ctx, i, num, data);
+}
+
 /**
  * gets the FAT entry for said FAT and said cluster;
  * returns 0 on failure;
@@ -124,7 +131,7 @@ uint32_t FAT_get_entry(t_FATContext *context, uint8_t fat_num, uint32_t cluster)
     offset += fat_num * SECTORS_PER_FAT(context) * context->boot_sector.bytes_per_sector;
     offset += FAT_get_offset(context, cluster);
 
-    uint32_t entry;
+    uint32_t entry = 0;
 
     switch(context->type){
         case FAT_12: {
@@ -328,7 +335,6 @@ uint32_t FindFreeCluster(t_FATContext *context){
     size_t num_clusters = context->boot_sector.num_sectors * context->boot_sector.sectors_per_cluster;
     for (size_t i = 2; i < num_clusters; ++i){
         uint32_t entry = FAT_get_entry(context, 0, i);
-        
         if (!entry) return i;
     }
 
@@ -343,7 +349,11 @@ uint32_t FindFreeCluster(t_FATContext *context){
  *  context->device is set
  *  context->partition_start is set
  */
-void FAT_context_init(t_FATContext *context){
+t_FATContext *FAT_context_init(storage_device_t *dev){
+    t_FATContext *context = kmalloc(sizeof(t_FATContext));
+    context->device = dev;
+    context->partition_start = 0;
+
     SAL_read(
         context->device, sizeof(t_BootSectorCommon), 
         0 + context->partition_start, &context->boot_sector
@@ -356,8 +366,8 @@ void FAT_context_init(t_FATContext *context){
     SAL_read(context->device, 2, 0x1FE, &boot_signature);
 
     if (boot_signature != 0xAA55){
-        context->type = FAT_NULL;
-        return;
+        kfree(context);
+        return NULL;
     }
 
     FAT_init_type(context);
@@ -385,36 +395,28 @@ void FAT_context_init(t_FATContext *context){
     }
     else
         SAL_read(context->device, sizeof(t_BootSectorCommonExt), offset, &context->old_ext);
-}
 
-/**
- * creates a file named "HELLO.TXT"
- *  in the root directory
- */
-void FAT_test(t_FATContext *ctx){
-    FAT_create(ctx, "/MYDIR", ENTRY_ATTR_DIRECTORY);
-    FAT_create(ctx, "/MYDIR/HELLO.TXT", 0);
+    context->bytes_p_clus = 
+        context->boot_sector.sectors_per_cluster * context->boot_sector.bytes_per_sector;
 
-    printf("/MYDIR found @ cluster %d\n", FAT_file_cluster(ctx, "/MYDIR"));
-    printf("/MYDIR/HELLO.TXT found @ cluster %d\n", FAT_file_cluster(ctx, "/MYDIR/../MYDIR/HELLO.TXT"));
+    return context;
 }
 
 /**
  * returns the final offset for file offset
  *  offset, for a file starting at cluster
+ * returns 0 on failure
  * 
  * follows the FAT cluster chain.. essentially
  */
 uint32_t FAT_absolute_offset(t_FATContext *ctx, uint32_t cluster, size_t offset, uint32_t *clus_fail){
-    size_t bytes_per_cluster = ctx->boot_sector.sectors_per_cluster * ctx->boot_sector.bytes_per_sector;
-
     if (cluster < 2)
         return RootDirSector(ctx) * ctx->boot_sector.bytes_per_sector + offset;
 
-    if (offset < bytes_per_cluster)
+    if (offset < ctx->bytes_p_clus)
         return FAT_clus_to_off(ctx, cluster) + offset;
-    
-    while (offset > bytes_per_cluster){
+
+    while (offset >= ctx->bytes_p_clus){
         uint32_t entry = FAT_get_entry(ctx, 0, cluster);
 
         if (FAT_is_eoc(ctx, entry)){
@@ -424,10 +426,10 @@ uint32_t FAT_absolute_offset(t_FATContext *ctx, uint32_t cluster, size_t offset,
 
         cluster = entry;
 
-        offset -= bytes_per_cluster;
+        offset -= ctx->bytes_p_clus;
     }
 
-    return cluster * bytes_per_cluster + offset;
+    return FAT_clus_to_off(ctx, cluster) + offset;
 }
 
 /**
@@ -549,12 +551,7 @@ void FAT_write_entry(t_FATContext *ctx, uint32_t cluster, void *entry){
         }
     }
 
-    /* reaching this point means a new cluster needs to be allocated */
-    
-    uint32_t new_cluster = FindFreeCluster(ctx);
-
-    for (int i = 0; i < ctx->boot_sector.num_fat; ++i)
-        FAT_set_entry(ctx, i, eoc, new_cluster);
+    FAT_allocate_cluster(ctx, cluster);
 
     eoc = 0;
 
@@ -593,6 +590,166 @@ void FAT_conv_fname(const char *name, char *out){
         out[j] = ' ';
 }
 
+/**
+ * initializes a directory that
+ * starts at cluster_num and is
+ * the child of a directory 
+ * starting in parent_clus with `.`
+ * and `..` entries, and sets the
+ * entry cluster to 0
+ */
+void FAT_init_dir(t_FATContext *ctx, uint32_t cluster_num, uint32_t parent_clus){
+    uint8_t attribs = ENTRY_ATTR_DIRECTORY | ENTRY_ATTR_HIDDEN | ENTRY_ATTR_SYSTEM;
+    
+    t_ShortDirEntry entry = {0};
+    entry = (t_ShortDirEntry){
+        .attributes = attribs,
+        .first_cluster_low = cluster_num,
+    };
+    memcpy(entry.name, ".          ", 11);
+    
+    uint8_t *zero = kmalloc(ctx->bytes_p_clus);
+    memset(zero, 0, ctx->bytes_p_clus);
+
+    SAL_write(ctx->device, ctx->bytes_p_clus, FAT_clus_to_off(ctx, cluster_num), zero);
+
+    kfree(zero);
+
+    FAT_write_entry(ctx, entry.first_cluster_low, &entry);
+
+    uint32_t clus = entry.first_cluster_low;
+
+    entry.name[1] = '.';
+    entry.first_cluster_low = parent_clus;
+
+    FAT_write_entry(ctx, clus, &entry);
+}
+
+/**
+ * inserts a null terminator within
+ *  the path, seperating the final
+ *  file and the parent directory,
+ *  returns the offset of the first
+ *  character of the filename
+ */
+uint32_t FAT_split_path(char *path){
+    uint32_t fname_begin = 0;
+    for (uint32_t i = 0; path[i]; ++i)
+        if (path[i] == '/')
+            fname_begin = i;
+    
+    path[fname_begin++] = '\0';    
+
+    return fname_begin;
+}
+
+/**
+ * frees the cluster chain starting at
+ * cluster, marking all the FAT entries
+ * as free
+ */
+void FAT_free_cluster_chain(t_FATContext *ctx, uint32_t cluster){
+    while (!FAT_is_eoc(ctx, cluster)){
+        uint32_t next = FAT_get_entry(ctx, 0, cluster);
+
+        FAT_set_entries(ctx, cluster, 0x0);
+
+        cluster = next; 
+    }
+    
+    /* set last cluster to free */
+    FAT_set_entries(ctx, cluster, 0x0);
+}
+
+static char path[0xFFF];
+
+/**
+ * get the directory entry corresponding
+ * to a specific file within the parent 
+ * directory
+ */
+void FAT_file_entry(t_FATContext *ctx, const char *_path, t_ShortDirEntry *out_entry){
+    memcpy(path, _path, strlen(_path));
+    
+    uint32_t fname_begin = FAT_split_path(path);
+
+    /* get the cluster of the parent directory */
+    uint32_t dir_cluster = FAT_file_cluster(ctx, path);
+
+    char fname[11];
+    FAT_conv_fname(path + fname_begin, fname);
+
+    bool eoc = FAT_dir_entry(ctx, dir_cluster, 0, out_entry);
+
+    for (uint32_t i = 0; !eoc; ++i){
+        if (!memcmp(out_entry, fname, 11)) return;
+        FAT_dir_entry(ctx, dir_cluster, i + 1, out_entry);
+    }
+
+    memset(out_entry, 0, sizeof *out_entry);
+}
+
+/**
+ * allocates a new cluster for the
+ *  cluster chain starting at cluster
+ */
+void FAT_allocate_cluster(t_FATContext *ctx, uint32_t _cluster){
+    uint32_t cluster = _cluster;
+    uint32_t next = FAT_get_entry(ctx, 0, cluster);
+    while (!FAT_is_eoc(ctx, next)){
+        cluster = next;
+        next    = FAT_get_entry(ctx, 0, next);
+    }
+
+    uint32_t free_clus = FindFreeCluster(ctx);
+    FAT_set_entries(ctx, cluster, free_clus);
+    FAT_set_entries(ctx, free_clus, 0xFFFFFFFF);
+
+}
+
+/**
+ * updates the size of the file entry
+ *  corresponding to the file fname
+ *  in the parent directory dir
+ */
+void FAT_upd_entry(t_FATContext *ctx, t_FATFile *file){
+    bool eoc = false;
+    t_ShortDirEntry entry;
+    uint32_t entry_num = 0;
+    do {
+        eoc = FAT_dir_entry(ctx, file->parent_clus, entry_num, &entry);
+        if (file->starting_clus == entry.first_cluster_low){
+            entry.file_size = file->size;
+            entry.last_access_date = FAT_get_date();
+            if (file->flags & FAT_FILE_WRITE){
+                entry.last_write_date = FAT_get_date();
+                entry.last_write_time = FAT_get_time();
+            }
+            size_t off = FAT_absolute_offset(ctx, file->parent_clus, entry_num * sizeof(entry), NULL);  
+            SAL_write(ctx->device, sizeof(entry), off, &entry);
+            return;
+        }
+        ++entry_num;
+    } while (!eoc);
+}
+
+uint16_t FAT_get_date(){
+    uint16_t fat_date = 0;
+    fat_date =  (time.monthday);
+    fat_date |= time.month << 5;
+    fat_date |= (time.year - 1980) << 9; 
+
+    return fat_date;
+}
+
+uint16_t FAT_get_time(){
+    uint16_t fat_time = 0;
+    fat_time = time.seconds / 2;
+    fat_time |= (time.minutes) << 5;
+    fat_time |= (time.hours) << 11;
+
+    return fat_time;
+}
 
 /* FUNCTIONS DEFINED BELOW THIS SUBHEADING ARE FOR THE VFS API */
 
@@ -602,55 +759,186 @@ void FAT_conv_fname(const char *name, char *out){
  *  fail if YOU fuck something up in the parameters !!
  */
 void FAT_create(t_FATContext *ctx, const char *_path, uint32_t attribs){
-    char path[0xFFF]; 
     memcpy(path, _path, strlen(_path));
     
-    int fname_begin = 0;
-    for (int i = 0; path[i]; ++i)
-        if (path[i] == '/')
-            fname_begin = i;
-    
-    path[fname_begin++] = '\0';
+    uint32_t fname_begin = FAT_split_path(path);
 
     /* get the cluster of the parent directory */
     uint32_t dir_cluster = FAT_file_cluster(ctx, path);
 
     char fname[11];
     FAT_conv_fname(path + fname_begin, fname);
-
-    t_ShortDirEntry entry = {
+    
+    t_ShortDirEntry entry = {0};
+    entry = (t_ShortDirEntry){
         .attributes = attribs,
-        .reserved = 0,
-        .creation_tenths = 0,
-        .creation_time = 0,
-        .creation_date = 0,
-        .last_access_date = 0,
-        .first_cluster_high = 0,
-        .last_write_time = 0,
-        .last_write_date = 0,
         .first_cluster_low = FindFreeCluster(ctx),
-        .file_size = ctx->boot_sector.bytes_per_sector * ctx->boot_sector.sectors_per_cluster
+        .creation_date = FAT_get_date(),
+        .creation_time = FAT_get_time(),
     };
 
     memcpy(entry.name, fname, 11);
     FAT_write_entry(ctx, dir_cluster, &entry);
 
-    for (uint16_t i = 0; i < ctx->boot_sector.num_fat; ++i)
-        FAT_set_entry(ctx, i, entry.first_cluster_low, 0xFFFFFFFF);
+    FAT_set_entries(ctx, entry.first_cluster_low, 0xFFFFFFFF);
 
-    /* creating '.' and '..' entries in directories */
-    if (attribs | ENTRY_ATTR_DIRECTORY){
-        memcpy(entry.name, ".          ", 11);
-        
-        FAT_write_entry(ctx, entry.first_cluster_low, &entry);
+    if (attribs & ENTRY_ATTR_DIRECTORY)
+        FAT_init_dir(ctx, entry.first_cluster_low, dir_cluster);
+}
 
-        uint32_t clus = entry.first_cluster_low;
+/**
+ * removes the file specified by _path 
+ *  and frees all the entries in the FAT
+ *  dedicated to said file
+ * DOES NOT handle removing children files
+ *  of directories, that is the responsibility
+ *  of the caller
+ */
+void FAT_remove(t_FATContext *ctx, const char *_path){
+    memcpy(path, _path, strlen(_path)); 
+    
+    uint32_t fname_begin = FAT_split_path(path),
+             parent_clus = FAT_file_cluster(ctx, path);
+    char fname[11];
+    FAT_conv_fname(path + fname_begin, fname);
 
-        entry.name[1] = '.';
-        entry.first_cluster_low = dir_cluster;
+    t_ShortDirEntry entry;
+    bool is_eoc = 
+        FAT_dir_entry(ctx, parent_clus, 0, &entry);
 
-        FAT_write_entry(ctx, clus, &entry);
+    for (uint32_t i = 0; !is_eoc; ++i){
+        if (!memcmp(entry.name, fname, 11)){
+            FAT_free_cluster_chain(ctx, entry.first_cluster_low);
+            size_t entry_off = i * sizeof(t_ShortDirEntry); 
+            size_t final_off = 
+                FAT_absolute_offset(ctx, parent_clus, entry_off, NULL);
+            entry = (t_ShortDirEntry){0};
+            SAL_write(ctx->device, sizeof(t_ShortDirEntry), final_off, &entry);
+        }
+
+        is_eoc = FAT_dir_entry(ctx, parent_clus, i + 1, &entry);
     }
 }
 
+t_FATFile *FAT_open(t_FATContext *ctx, const char *_path, uint8_t mode){
+    uint32_t starting_clus = FAT_file_cluster(ctx, _path),
+             parent_clus;
+    size_t   file_size;
 
+    if (!~starting_clus) return NULL;
+
+    t_ShortDirEntry entry;
+    FAT_file_entry(ctx, _path, &entry);
+
+    file_size = entry.file_size;
+    
+    /* get the parent directory */
+    memcpy(path, _path, strlen(_path));
+    FAT_split_path(path);
+
+    /* if the parent directory is NOT root */
+    if (strlen(path)){
+        FAT_file_entry(ctx, path, &entry);
+        parent_clus = entry.first_cluster_low;
+    }
+    else
+        parent_clus = 0;
+    
+    t_FATFile *file = kmalloc(sizeof *file);
+    
+    if (file)
+        *file = (t_FATFile){
+            .starting_clus = starting_clus,
+            .parent_clus   = parent_clus,
+            .size          = file_size,
+            .flags         = mode,
+            .ctx           = ctx
+        };
+
+    return file;
+}
+
+void FAT_close(t_FATFile *file){
+    FAT_upd_entry(file->ctx, file);
+
+    kfree(file);
+}
+
+size_t FAT_write(t_FATFile *file, size_t len, void *data){
+    if (!(file->flags | FAT_FILE_WRITE)) return 0;
+    t_FATContext *ctx = file->ctx;
+    size_t full_off = FAT_absolute_offset(ctx, file->starting_clus, file->size, NULL),
+           bytes_written = 0, 
+           bpc  = ctx->bytes_p_clus;
+
+    if (file->size && !(file->size % bpc))
+        FAT_allocate_cluster(ctx, file->starting_clus);
+
+    /* start on unaligned to cluster */
+    if (file->size % bpc){
+        size_t clust_off = file->size % bpc,
+               write_len = bpc - clust_off >= len ? len : bpc - clust_off;
+        SAL_write(ctx->device, write_len, full_off, data); 
+        bytes_written += write_len;
+        file->size    += write_len;
+    }
+
+    while (len - bytes_written >= bpc){
+        FAT_allocate_cluster(ctx, file->starting_clus);
+        full_off = FAT_absolute_offset(ctx, file->starting_clus, file->size, NULL);
+        SAL_write(ctx->device, bpc, full_off, data + bytes_written); 
+        bytes_written += bpc;
+        file->size    += bpc;
+    }
+
+    /* end on unaligned to cluster */
+    if (len - bytes_written){
+        if (file->size) FAT_allocate_cluster(ctx, file->starting_clus);
+        full_off = FAT_absolute_offset(ctx, file->starting_clus, file->size, NULL);
+        size_t copy_len = len - bytes_written;
+        SAL_write(ctx->device, copy_len, full_off, data + bytes_written);
+        bytes_written += copy_len;
+        file->size    += copy_len;
+    }
+
+    return bytes_written;
+}
+
+size_t FAT_read(t_FATFile *file, size_t len, void *data){
+    if (!(file->flags | FAT_FILE_READ)) return 0;
+    t_FATContext *ctx = file->ctx;
+    size_t full_off = FAT_absolute_offset(ctx, file->starting_clus, file->position, NULL),
+           bytes_read = 0, 
+           bpc  = ctx->bytes_p_clus;
+
+    /* start on unaligned to cluster */
+    if (file->position % bpc){
+        size_t clust_off = file->position % bpc,
+               read_len  = bpc - clust_off >= len ? len : bpc - clust_off;
+        SAL_read(ctx->device, read_len, full_off, data); 
+        bytes_read     += read_len;
+        file->position += read_len;
+        if (bytes_read > file->size) return 0;
+    }
+
+    while (len - bytes_read >= bpc){
+        uint32_t fuck_this;
+        full_off = FAT_absolute_offset(ctx, file->starting_clus, file->position, &fuck_this);
+        SAL_read(ctx->device, bpc, full_off, data + bytes_read); 
+        bytes_read += bpc;
+        file->position += bpc;
+        if (bytes_read > file->size) return 0;
+    }
+
+    /* end on unaligned to cluster */
+    if (len - bytes_read){
+        full_off = FAT_absolute_offset(ctx, file->starting_clus, file->position, NULL);
+        size_t read_len = len - bytes_read;
+        SAL_read(ctx->device, read_len, full_off, data + bytes_read);
+        bytes_read += read_len;
+        file->position += read_len;
+        if (bytes_read > file->size) return 0;
+    }
+
+    return bytes_read;
+}

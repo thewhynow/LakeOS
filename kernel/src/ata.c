@@ -1,6 +1,6 @@
 #define _ATA_H_INTERNAL
 #include "../include/ata.h"
-#include "../include/sal.h"
+#include "../../libc/include/stdlib.h"
 
 IDE_channel_regs_t channels[2];
 

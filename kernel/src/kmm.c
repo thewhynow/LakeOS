@@ -21,7 +21,9 @@ void kfree(void *p){
 
     /* keep blocks sequential */
     
-    while (iter->next < fblock) iter = iter->next;
+    if (iter != iter->next)
+        while (iter->next < fblock) 
+            iter = iter->next;
 
     next = iter->next;
     

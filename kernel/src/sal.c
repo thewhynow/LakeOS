@@ -1,9 +1,8 @@
 #define _SAL_H_INTERNAL
 #define _ATA_H_INTERNAL
 #include "../include/sal.h"
-#include "../include/fdc.h"
-#include "../include/ata.h"
 #include "../include/kmm.h"
+#include "../../libc/include/string.h"
 
 /*
 writes data to offset of sector
@@ -76,7 +75,7 @@ void SAL_read (storage_device_t *device, size_t len, uint32_t offset, void *buff
     }
 }
 
-void SAL_write(storage_device_t *device, size_t len, uint32_t offset, const void *buff){
+void SAL_write(storage_device_t *device, size_t len, uint32_t offset, void *buff){
     size_t copied_len = 0;
     size_t sector_size = device->sector_size;
 
@@ -101,7 +100,9 @@ void SAL_write(storage_device_t *device, size_t len, uint32_t offset, const void
         uint32_t curr_off   = offset + copied_len;
         uint32_t sector_off = curr_off % sector_size;
         
-        SAL_write_unaligned(len - copied_len, sector_off, curr_off / sector_size, buff + copied_len, device);
+        SAL_write_unaligned(
+             len - copied_len, sector_off, curr_off / sector_size, buff + copied_len, device
+        );
     }
 }
 

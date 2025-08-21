@@ -311,6 +311,13 @@ typedef struct {
      *  it, just in case...
      */
     size_t                partition_start;
+
+    /**
+     * since this field is (very annoyingly)
+     *  missing from the boot sector, i added
+     *  it here to avoid recalculation
+     */
+    uint32_t              bytes_p_clus;
 } t_FATContext;
 
 #define SECTORS_PER_FAT(context) (            \
@@ -386,32 +393,6 @@ static const t_TotalSectors_SectorsPerCluster FAT32_NUM_SECTORS_TO_SECTORS_PER_C
  */
 
 
- /**
-  * upper two bits of attrib byte are reserved and should be set to 0
-  */
-typedef enum {
-    /* writes to the file should fail */
-    ENTRY_ATTR_READ_ONLY = 0x01,
-    /* file should not show up in normal directory listings */
-    ENTRY_ATTR_HIDDEN    = 0x02,
-    /* file is part of the operating system */
-    ENTRY_ATTR_SYSTEM    = 0x04,
-    /**
-     * - there should only be one "file" that has this attribute
-     * - name of said file is the volume label
-     * - has to be in the root directory
-     * - first_cluster_* should be 0
-     */
-    ENTRY_ATTR_VOLUME_ID = 0x08,
-    /* file is a container for other files (no shit) */
-    ENTRY_ATTR_DIRECTORY = 0x10,
-    /* bit is set when the file is written, renamed, or created */
-    ENTRY_ATTR_ARCHIVE   = 0x20,
-    
-    ENTRY_ATTR_LONG_NAME = ENTRY_ATTR_READ_ONLY | ENTRY_ATTR_HIDDEN | ENTRY_ATTR_SYSTEM | ENTRY_ATTR_VOLUME_ID,
-    
-    ENTRY_ATTR_MASK_LONG_NAME = ENTRY_ATTR_LONG_NAME | ENTRY_ATTR_DIRECTORY | ENTRY_ATTR_ARCHIVE
-} e_DirEntryAttributes;
 
 /**
  * when a directory is created:
@@ -442,6 +423,7 @@ typedef enum {
  *  [11:15] -> hours   [0, 23]
  *  - [12:00:00 AM, 11:59:58 PM]
  */
+
 
 typedef struct {
     /**
@@ -571,11 +553,6 @@ typedef enum {
     DIR_ENTRY_VOL_LABEL,
 } e_LongDirEntryType;
 
-void FAT_context_init(t_FATContext *context);
-void FAT_test(t_FATContext *context);
-
-void FAT_create(t_FATContext *ctx, const char *_path, uint32_t attribs);
-
 uint32_t FAT_absolute_offset(t_FATContext *ctx, uint32_t cluster, size_t offset, uint32_t *clus_fail);
 
 uint32_t FAT_dir_entry(t_FATContext *ctx, uint32_t cluster, uint32_t entry_num, void *out_entry);
@@ -602,8 +579,85 @@ bool FAT_is_root(t_FATContext *ctx, uint32_t cluster);
 void FAT_write_entry(t_FATContext *ctx, uint32_t cluster, void *entry);
 
 void FAT_conv_fname(const char *name, char *out);
+
+void FAT_init_dir(t_FATContext *ctx, uint32_t cluster, uint32_t parent_clus);
+
+void FAT_allocate_cluster(t_FATContext *ctx, uint32_t cluster);
+
+
+typedef struct {
+    uint32_t starting_clus,
+             parent_clus,
+             position;
+    size_t   size; 
+    /* refer to e_FATFileFlagMasks */
+    uint8_t flags;
+
+    t_FATContext *ctx;
+} t_FATFile;
+
+#define BYTES_PER_CLUSTER(ctx)\
+    ((ctx)->boot_sector.bytes_per_sector * (ctx)->boot_sector.sectors_per_cluster)
+
 #endif
 
+typedef enum {
+    FAT_FILE_READ  = 0b00000001,
+    FAT_FILE_WRITE = 0b00000010,
+    FAT_FILE_APPND = 0b00000100,
+    FAT_FILE_EOF   = 0b00001000
+} e_FATFileFlagMasks;
 
+ /**
+  * upper two bits of attrib byte are reserved and should be set to 0
+  */
+typedef enum {
+    /* writes to the file should fail */
+    ENTRY_ATTR_READ_ONLY = 0x01,
+    /* file should not show up in normal directory listings */
+    ENTRY_ATTR_HIDDEN    = 0x02,
+    /* file is part of the operating system */
+    ENTRY_ATTR_SYSTEM    = 0x04,
+    /**
+     * - there should only be one "file" that has this attribute
+     * - name of said file is the volume label
+     * - has to be in the root directory
+     * - first_cluster_* should be 0
+     */
+    ENTRY_ATTR_VOLUME_ID = 0x08,
+    /* file is a container for other files (no shit) */
+    ENTRY_ATTR_DIRECTORY = 0x10,
+    /* bit is set when the file is written, renamed, or created */
+    ENTRY_ATTR_ARCHIVE   = 0x20,
+    
+    ENTRY_ATTR_LONG_NAME = 
+        ENTRY_ATTR_READ_ONLY | ENTRY_ATTR_HIDDEN | ENTRY_ATTR_SYSTEM | ENTRY_ATTR_VOLUME_ID,
+    
+    ENTRY_ATTR_MASK_LONG_NAME = ENTRY_ATTR_LONG_NAME | ENTRY_ATTR_DIRECTORY | ENTRY_ATTR_ARCHIVE
+} e_DirEntryAttributes;
+
+uint16_t FAT_get_date();
+uint16_t FAT_get_time();
+
+#endif
+
+#ifndef _FAT_H_INTERNAL
+
+typedef struct t_FATContext t_FATContext;
+typedef struct t_FATFile    t_FATFile;
+
+t_FATContext *FAT_context_init(storage_device_t *dev);
+
+void FAT_create(t_FATContext *ctx, const char *_path, uint32_t attribs);
+
+void FAT_remove(t_FATContext *ctx, const char *_path);
+
+t_FATFile *FAT_open(t_FATContext *ctx, const char *path, uint8_t mode);
+
+void FAT_close(t_FATFile *file);
+
+size_t FAT_write(t_FATFile *file, size_t len, void *data);
+
+size_t FAT_read(t_FATFile *file, size_t len, void *data);
 
 #endif

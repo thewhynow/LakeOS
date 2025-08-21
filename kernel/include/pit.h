@@ -18,3 +18,9 @@ void PIT_sleep(uint64_t ms);
 
 
 #endif
+
+#ifdef _PIT_H_INTERNAL
+
+uint8_t max_monthday(uint16_t year, uint8_t month);
+
+#endif

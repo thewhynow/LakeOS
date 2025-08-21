@@ -165,6 +165,14 @@ void ISR_page_flt_handler(registers_t *regs){
     );
     
     /* page is in kernel heap */
-    if (0xD0000000 < fault_addr && fault_addr < 0xE0000000)
+    if (0xD0000000 <= fault_addr && fault_addr < 0xE0000000)
         valloc_page((void*) fault_addr);
+    else {
+        printf(
+            "FATAL ERROR: PAGE FAULT AT ADDRESS %p\n"
+            "SYSTEM HALTING, MANUAL SHIT OFF REQUIRED\n", 
+            (void*)fault_addr
+        );
+        for (;;);
+    }
 }

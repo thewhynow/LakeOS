@@ -4,6 +4,7 @@
 #include "../../libc/include/types.h"
 #include "io.h"
 #include "pit.h"
+#include "sal.h"
 
 #ifdef _ATA_H_INTERNAL
 

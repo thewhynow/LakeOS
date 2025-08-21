@@ -102,8 +102,10 @@ void PMM_init() {
     }
 }
 
+static size_t last_freed_block;
+
 void* alloc_page() {
-    for (size_t block_num = 0; block_num < bitmap_len; ++block_num){
+    for (size_t block_num = last_freed_block; block_num < bitmap_len; ++block_num){
         if (bitmap_getblockstate(block_num) == BITMAP_BLOCK_FREE){
             bitmap_setblockstate(block_num, BITMAP_BLOCK_USED);
             return (void*)(MEMORY_BLOCK_SIZE * block_num);
@@ -113,11 +115,12 @@ void* alloc_page() {
 }
 
 void free_page(void* page){
-    bitmap_setblockstate((uint32_t)page / MEMORY_BLOCK_SIZE, BITMAP_BLOCK_FREE);
+    last_freed_block = (size_t)page / MEMORY_BLOCK_SIZE;
+    bitmap_setblockstate(last_freed_block, BITMAP_BLOCK_FREE);
 }
 
 void* alloc_pages(size_t n){
-    for (size_t block_num = 0; block_num < bitmap_len; ++block_num){
+    for (size_t block_num = last_freed_block; block_num < bitmap_len; ++block_num){
         size_t free_block_size = 0;
         for (; bitmap_getblockstate(block_num + free_block_size) == BITMAP_BLOCK_FREE; ++free_block_size){
             if (free_block_size == n){
@@ -136,6 +139,7 @@ void* alloc_pages(size_t n){
 }
 
 void free_pages(void* page, size_t n){
+    last_freed_block = (size_t)page / MEMORY_BLOCK_SIZE;
     for (size_t i = 0; i <= n; ++i)
-        bitmap_setblockstate((uint32_t)page / MEMORY_BLOCK_SIZE + i, BITMAP_BLOCK_FREE);
+        bitmap_setblockstate(last_freed_block + i, BITMAP_BLOCK_FREE);
 }
