@@ -101,6 +101,8 @@ $compiler_path -c kernel/src/sal.c        -o sal.o        $c_flags
 $compiler_path -c kernel/src/fat.c        -o fat.o        $c_flags
 $compiler_path -c kernel/src/kmm.c        -o kmm.o        $c_flags
 $compiler_path -c kernel/src/rtc.c        -o rtc.o        $c_flags
+$compiler_path -c kernel/src/vfs.c        -o vfs.o        $c_flags
+$compiler_path -c kernel/src/vfm.c        -o vfm.o        $c_flags
 
 $compiler_path -c libc/stdio/printf.c     -o printf.o     $c_flags
 $compiler_path -c libc/stdio/putchar.c    -o putchar.o    $c_flags
@@ -119,7 +121,8 @@ $compiler_path -c libc/string/strncat.c   -o strncat.o    $c_flags
 $compiler_path -c libc/string/strchr.c    -o strchr.o     $c_flags
 $compiler_path -c libc/string/strtok.c    -o strtok.o     $c_flags
 $compiler_path -c libc/string/strpbrk.c   -o strpbrk.o    $c_flags
-
+$compiler_path -c libc/string/strdup.c    -o strdup.o     $c_flags
+$compiler_path -c libc/string/strcpy.c    -o strcpy.o     $c_flags
 
 $assemble_path kernel/asm/boot.s          -o boot.o       $s_flags
 $assemble_path kernel/asm/crti.s          -o crti.o       $s_flags

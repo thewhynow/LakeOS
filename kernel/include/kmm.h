@@ -9,6 +9,9 @@ void *kmalloc(size_t len);
 void  kfree(void *p);
 
 void *krealloc(void *p, size_t new_size);
+void *kexpand(void *p, size_t increment);
+
+size_t ksize(void *p);
 
 #endif
 

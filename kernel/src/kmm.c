@@ -1,5 +1,6 @@
 #define _KMM_H_INTERNAL
 #include "../include/kmm.h"
+#include "../../libc/include/string.h"
 
 static t_FreeBlock *freelist = HEAP_START;
 
@@ -11,6 +12,34 @@ void KMM_init(){
 
 void *kmalloc(size_t bytes){
     return find_first_fit(bytes);
+}
+
+void *krealloc(void *p, size_t new_sz){
+    if (!p) return kmalloc(new_sz);
+    size_t alloc_sz = *((size_t*)p - 1);
+    if (new_sz <= alloc_sz) return p;
+
+    for (t_FreeBlock *iter = freelist; iter->next != freelist; iter = iter->next){
+        if (iter == p + alloc_sz){
+            size_t offset = new_sz - alloc_sz;
+            memcpy((void*)iter + offset, iter, sizeof *iter);
+            iter = (void*)iter + offset;
+            iter->size -= offset;
+            *((size_t*)p - 1) = new_sz;
+            return p;
+        }
+    }
+
+    void *new = kmalloc(new_sz);
+    memcpy(new, p, alloc_sz);
+    kfree(p);
+    return new;
+}
+
+void *kexpand(void *p, size_t increment){
+    if (!p) return kmalloc(increment);
+    size_t alloc_sz = *((size_t*)p - 1);
+    return krealloc(p, alloc_sz + increment);
 }
 
 void kfree(void *p){
@@ -34,6 +63,12 @@ void kfree(void *p){
     fblock->prev = iter;
 
     coalesce_neighbors(fblock);
+}
+
+size_t ksize(void *p){
+    if (!p) return 0;
+    size_t *size_p = p;
+    return *(size_p - 1);
 }
 
 void *find_first_fit(size_t bytes){

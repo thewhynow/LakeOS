@@ -14,6 +14,7 @@
 #include "../include/fat.h"
 #include "../include/kmm.h"
 #include "../include/rtc.h"
+#include "../include/vfs.h"
 
 void kernel_main() {
     terminal_init();
@@ -53,26 +54,13 @@ void kernel_main() {
     printf("Loading IDE...");
     IDE_init();
     printf("IDE Loaded!\n");
+    printf("Loading FAT...");
+    FAT_init();
+    printf("FAT Loaded!\n");
+    printf("Loading VFS...\n");
+    VFS_init();
+    printf("VFS Loaded!\n");
 
-    uint32_t num_devices;
-    
-    printf("Dumping Storage Devices...\n");
-    storage_device_t *devices = SAL_get_devices(&num_devices);
-    for (int i = 0; i < (int) num_devices; ++ i)
-        printf("Device %i name: %s\n", i, devices[i].name);
-
-    t_FATContext *ctx = FAT_context_init(devices + 0);
-    FAT_create(ctx, "/FILE.TXT", 0);   
-
-    t_FATFile *file = FAT_open(ctx, "/FILE.TXT", FAT_FILE_WRITE);
-    FAT_write(file, 13, "Hello, World!");
-    FAT_close(file);
-
-    for (int i = 0; i < 60; ++i){
-        printf("waiting %d seconds\n", i);
-        PIT_sleep(1000);
-    }
-    
     printf("the date is %d/%d/%d\n", time.month, time.monthday, time.year);
     printf("the time is %d:%d:%d\n", time.hours, time.minutes,  time.seconds);
 
@@ -80,8 +68,7 @@ void kernel_main() {
     
     char *string = kmalloc(100);
     
-    while (1) {
-        memset(string, 0, 100);
+    while (true) {
         gets(string);
         printf("string: %s\n", string);
 	

@@ -349,7 +349,7 @@ uint32_t FindFreeCluster(t_FATContext *context){
  *  context->device is set
  *  context->partition_start is set
  */
-t_FATContext *FAT_context_init(storage_device_t *dev){
+t_FATContext *FAT_mount(storage_device_t *dev){
     t_FATContext *context = kmalloc(sizeof(t_FATContext));
     context->device = dev;
     context->partition_start = 0;
@@ -373,8 +373,9 @@ t_FATContext *FAT_context_init(storage_device_t *dev){
     FAT_init_type(context);
 
     /* round up */
-    uint32_t root_sectors = (context->boot_sector.num_root_entries * 32 + context->boot_sector.bytes_per_sector - 1) 
-                            / context->boot_sector.bytes_per_sector;
+    uint32_t root_sectors = 
+        (context->boot_sector.num_root_entries * 32 + context->boot_sector.bytes_per_sector - 1) 
+        / context->boot_sector.bytes_per_sector;
 
     context->data_region_start  = context->boot_sector.reserved_sectors;
     context->data_region_start += context->boot_sector.num_fat * context->boot_sector.sectors_per_fat;
@@ -399,6 +400,14 @@ t_FATContext *FAT_context_init(storage_device_t *dev){
     context->bytes_p_clus = 
         context->boot_sector.sectors_per_cluster * context->boot_sector.bytes_per_sector;
 
+    context->root = (t_FATHandle){
+        .start_cluster = context->type == FAT_32
+            ? context->fat32_ext.root_cluster_num : 0,
+        .attribs = DIR_ENTRY_DIRECTORY,
+        .dir_cluster = 0, 
+        .ctx = context,
+        .name[0] = '\0'
+    };
     return context;
 }
 
@@ -591,6 +600,23 @@ void FAT_conv_fname(const char *name, char *out){
 }
 
 /**
+ * converts from a FAT internal FS name
+ *  to an actual string
+ */
+void FAT_fname_conv(const char *fname, char *name){
+    size_t i = 0;
+    for (; i < 8 && fname[i] != ' '; ++i)
+        name[i] = fname[i];
+
+    if (fname[i] != ' ') name[i++] = '.';
+   
+    for (size_t j = 8; j < 11 && fname[j] != ' '; ++i, ++j)
+        name[i] = fname[j];
+
+    name[i] = '\0';
+}
+
+/**
  * initializes a directory that
  * starts at cluster_num and is
  * the child of a directory 
@@ -661,29 +687,15 @@ void FAT_free_cluster_chain(t_FATContext *ctx, uint32_t cluster){
     FAT_set_entries(ctx, cluster, 0x0);
 }
 
-static char path[0xFFF];
+void FAT_file_entry(t_FATHandle *file, t_ShortDirEntry *out_entry){
+    char conv_fname[11];
+    FAT_conv_fname(file->name, conv_fname);
 
-/**
- * get the directory entry corresponding
- * to a specific file within the parent 
- * directory
- */
-void FAT_file_entry(t_FATContext *ctx, const char *_path, t_ShortDirEntry *out_entry){
-    memcpy(path, _path, strlen(_path));
-    
-    uint32_t fname_begin = FAT_split_path(path);
-
-    /* get the cluster of the parent directory */
-    uint32_t dir_cluster = FAT_file_cluster(ctx, path);
-
-    char fname[11];
-    FAT_conv_fname(path + fname_begin, fname);
-
-    bool eoc = FAT_dir_entry(ctx, dir_cluster, 0, out_entry);
+    bool eoc = FAT_dir_entry(file->ctx, file->dir_cluster, 0, out_entry);
 
     for (uint32_t i = 0; !eoc; ++i){
-        if (!memcmp(out_entry, fname, 11)) return;
-        FAT_dir_entry(ctx, dir_cluster, i + 1, out_entry);
+        if (!memcmp(out_entry, conv_fname, 11)) return;
+        FAT_dir_entry(file->ctx, file->dir_cluster, i + 1, out_entry);
     }
 
     memset(out_entry, 0, sizeof *out_entry);
@@ -751,99 +763,109 @@ uint16_t FAT_get_time(){
     return fat_time;
 }
 
+void FAT_conv_to_chrono(uint16_t fat_date, uint16_t fat_time, t_FileChrono *out){
+    *out = (t_FileChrono){
+        .day_of_month  = fat_date & 0x1F,
+        .month_of_year = (fat_date >> 5) & 0xF,
+        .year          = (fat_date >> 9) & 0x7F + 1980,
+        .seconds       = (fat_time & 0x1F) * 2,
+        .minutes       = (fat_time >> 5) & 0x3F,
+        .hours         = (fat_time >> 11) & 0x1F
+    };
+}
+
+uint8_t FAT_conv_attrib(uint8_t vfsattrib){
+    uint8_t res = 0;
+    if (vfsattrib & FILE_ATTRIB_DIRECTORY) res |= ENTRY_ATTR_DIRECTORY;
+    if (vfsattrib & FILE_ATTRIB_HIDDEN)    res |= ENTRY_ATTR_HIDDEN;
+    if (vfsattrib & FILE_ATTRIB_SYSTEM)    res |= ENTRY_ATTR_SYSTEM;
+    if (vfsattrib & FILE_ATTRIB_READ_ONLY) res |= ENTRY_ATTR_READ_ONLY;
+    return res;
+}
+
 /* FUNCTIONS DEFINED BELOW THIS SUBHEADING ARE FOR THE VFS API */
 
-/**
- * this function creates a file mentioned by the specified path
- *  doesn't do m(any) sanity checks and will silently (or very loudly)
- *  fail if YOU fuck something up in the parameters !!
- */
-void FAT_create(t_FATContext *ctx, const char *_path, uint32_t attribs){
-    memcpy(path, _path, strlen(_path));
-    
-    uint32_t fname_begin = FAT_split_path(path);
+void FAT_unmount(t_FATContext *ctx){
+    kfree(ctx);
+}
 
-    /* get the cluster of the parent directory */
-    uint32_t dir_cluster = FAT_file_cluster(ctx, path);
+t_FATHandle *FAT_get_root(t_FATContext *ctx){
+    return &ctx->root;
+}
 
-    char fname[11];
-    FAT_conv_fname(path + fname_begin, fname);
+t_FATHandle *FAT_lookup(t_FATContext *ctx, t_FATHandle *dir, const char *name){
+    t_ShortDirEntry entry;
+    t_FATHandle temp = (t_FATHandle){
+        .ctx = ctx,
+        .dir_cluster = dir->start_cluster
+    };
+    memcpy(temp.name, name, 11);
+    FAT_file_entry(&temp, &entry);
+    t_FATHandle *handle;
+
+    if (entry.first_cluster_low){
+        handle = kmalloc(sizeof (t_FATHandle));
+        *handle = (t_FATHandle){
+            .start_cluster = entry.first_cluster_low,
+            .dir_cluster = dir->start_cluster,
+            .attribs = entry.attributes,
+            .ctx = dir->ctx
+        };
+        memcpy(handle->name, name, 13);
+        return handle;
+    }
     
+    return NULL;
+}
+
+void FAT_create(t_FATHandle *dir, const char *name, uint8_t attribs){
     t_ShortDirEntry entry = {0};
     entry = (t_ShortDirEntry){
-        .attributes = attribs,
-        .first_cluster_low = FindFreeCluster(ctx),
+        .attributes = FAT_conv_attrib(attribs),
+        .first_cluster_low = FindFreeCluster(dir->ctx),
         .creation_date = FAT_get_date(),
         .creation_time = FAT_get_time(),
     };
 
-    memcpy(entry.name, fname, 11);
-    FAT_write_entry(ctx, dir_cluster, &entry);
+    FAT_conv_fname(name, (char*)&entry.name);
+    FAT_write_entry(dir->ctx, dir->start_cluster, &entry);
 
-    FAT_set_entries(ctx, entry.first_cluster_low, 0xFFFFFFFF);
+    FAT_set_entries(dir->ctx, entry.first_cluster_low, 0xFFFFFFFF);
 
-    if (attribs & ENTRY_ATTR_DIRECTORY)
-        FAT_init_dir(ctx, entry.first_cluster_low, dir_cluster);
+    if (attribs & FILE_ATTRIB_DIRECTORY)
+        FAT_init_dir(dir->ctx, entry.first_cluster_low, dir->start_cluster);
 }
 
-/**
- * removes the file specified by _path 
- *  and frees all the entries in the FAT
- *  dedicated to said file
- * DOES NOT handle removing children files
- *  of directories, that is the responsibility
- *  of the caller
- */
-void FAT_remove(t_FATContext *ctx, const char *_path){
-    memcpy(path, _path, strlen(_path)); 
-    
-    uint32_t fname_begin = FAT_split_path(path),
-             parent_clus = FAT_file_cluster(ctx, path);
-    char fname[11];
-    FAT_conv_fname(path + fname_begin, fname);
-
+void FAT_remove(t_FATHandle *file){
     t_ShortDirEntry entry;
     bool is_eoc = 
-        FAT_dir_entry(ctx, parent_clus, 0, &entry);
+        FAT_dir_entry(file->ctx, file->dir_cluster, 0, &entry);
 
+    char conv_fname[11];
+    FAT_conv_fname(file->name, conv_fname);
     for (uint32_t i = 0; !is_eoc; ++i){
-        if (!memcmp(entry.name, fname, 11)){
-            FAT_free_cluster_chain(ctx, entry.first_cluster_low);
+        if (!memcmp(entry.name, conv_fname, 11)){
+            FAT_free_cluster_chain(file->ctx, entry.first_cluster_low);
             size_t entry_off = i * sizeof(t_ShortDirEntry); 
             size_t final_off = 
-                FAT_absolute_offset(ctx, parent_clus, entry_off, NULL);
+                FAT_absolute_offset(file->ctx, file->dir_cluster, entry_off, NULL);
             entry = (t_ShortDirEntry){0};
-            SAL_write(ctx->device, sizeof(t_ShortDirEntry), final_off, &entry);
+            SAL_write(file->ctx->device, sizeof(t_ShortDirEntry), final_off, &entry);
         }
 
-        is_eoc = FAT_dir_entry(ctx, parent_clus, i + 1, &entry);
+        is_eoc = FAT_dir_entry(file->ctx, file->dir_cluster, i + 1, &entry);
     }
 }
 
-t_FATFile *FAT_open(t_FATContext *ctx, const char *_path, uint8_t mode){
-    uint32_t starting_clus = FAT_file_cluster(ctx, _path),
-             parent_clus;
+t_FATFile *FAT_open(t_FATHandle *handle, uint8_t mode){
+    uint32_t starting_clus = handle->start_cluster,
+             parent_clus   = handle->dir_cluster;
     size_t   file_size;
 
-    if (!~starting_clus) return NULL;
-
     t_ShortDirEntry entry;
-    FAT_file_entry(ctx, _path, &entry);
-
+    FAT_file_entry(handle, &entry);
     file_size = entry.file_size;
-    
-    /* get the parent directory */
-    memcpy(path, _path, strlen(_path));
-    FAT_split_path(path);
-
-    /* if the parent directory is NOT root */
-    if (strlen(path)){
-        FAT_file_entry(ctx, path, &entry);
-        parent_clus = entry.first_cluster_low;
-    }
-    else
-        parent_clus = 0;
-    
+        
     t_FATFile *file = kmalloc(sizeof *file);
     
     if (file)
@@ -852,7 +874,7 @@ t_FATFile *FAT_open(t_FATContext *ctx, const char *_path, uint8_t mode){
             .parent_clus   = parent_clus,
             .size          = file_size,
             .flags         = mode,
-            .ctx           = ctx
+            .ctx           = handle->ctx
         };
 
     return file;
@@ -922,8 +944,7 @@ size_t FAT_read(t_FATFile *file, size_t len, void *data){
     }
 
     while (len - bytes_read >= bpc){
-        uint32_t fuck_this;
-        full_off = FAT_absolute_offset(ctx, file->starting_clus, file->position, &fuck_this);
+        full_off = FAT_absolute_offset(ctx, file->starting_clus, file->position, NULL);
         SAL_read(ctx->device, bpc, full_off, data + bytes_read); 
         bytes_read += bpc;
         file->position += bpc;
@@ -941,4 +962,61 @@ size_t FAT_read(t_FATFile *file, size_t len, void *data){
     }
 
     return bytes_read;
+}
+
+t_FATHandle *FAT_read_dir(t_FATHandle *dir, size_t n){
+    t_ShortDirEntry entry;
+    uint32_t fail = 
+        FAT_dir_entry(dir->ctx, dir->start_cluster, n, &entry);
+    
+    if (!fail) return NULL;
+        
+    t_FATHandle *new = kmalloc(sizeof(t_FATHandle));
+    *new = (t_FATHandle){
+            .start_cluster = entry.first_cluster_low,
+            .dir_cluster = dir->start_cluster,
+            .attribs = entry.attributes,
+            .ctx = dir->ctx
+    };
+    FAT_fname_conv((char*)entry.name, new->name);
+    
+    return new; 
+}
+
+const char *FAT_handle_name(t_FATHandle *handle){ 
+    return handle->name; 
+}
+
+void FAT_file_stat(t_FATHandle *file, t_FileStat *out){
+    t_ShortDirEntry entry;
+    FAT_file_entry(file, &entry);
+    FAT_conv_to_chrono(entry.creation_date, entry.creation_time, &out->created);
+    FAT_conv_to_chrono(entry.last_write_date, entry.last_write_time, &out->modified);
+    out->size = entry.file_size;
+    out->flags = 0;
+    if (entry.attributes | ENTRY_ATTR_DIRECTORY) out->flags |= FILE_ATTRIB_DIRECTORY;
+    if (entry.attributes | ENTRY_ATTR_READ_ONLY) out->flags |= FILE_ATTRIB_READ_ONLY;
+    if (entry.attributes | ENTRY_ATTR_HIDDEN)    out->flags |= FILE_ATTRIB_HIDDEN;
+    if (entry.attributes | ENTRY_ATTR_SYSTEM)    out->flags |= FILE_ATTRIB_SYSTEM;
+}
+
+
+
+void FAT_init(){
+    t_VFSOperations driver = (t_VFSOperations){
+        .f_Mount    = (void*)FAT_mount,
+        .f_UnMount  = (void*)FAT_unmount,
+        .f_Root     = (void*)FAT_get_root,
+        .f_Lookup   = (void*)FAT_lookup,
+        .f_Create   = (void*)FAT_create,
+        .f_Remove   = (void*)FAT_remove,
+        .f_Open     = (void*)FAT_open,
+        .f_Close    = (void*)FAT_close,
+        .f_Read     = (void*)FAT_read,
+        .f_Write    = (void*)FAT_write,
+        .f_ReadDir  = (void*)FAT_read_dir,
+        .f_NodeName = (void*)FAT_handle_name,
+        .f_Stat     = (void*)FAT_file_stat
+    };
+    VFS_register_fs(&driver);
 }

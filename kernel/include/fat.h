@@ -3,6 +3,7 @@
 
 #include "../../libc/include/types.h"
 #include "sal.h"
+#include "vfs.h"
 
 #ifdef _FAT_H_INTERNAL
 
@@ -285,7 +286,18 @@ typedef enum {
     FAT_32,
 } e_FAT;
 
-typedef struct {
+typedef struct t_FATHandle t_FATHandle;
+typedef struct t_FATContext t_FATContext;
+
+struct t_FATHandle {
+    uint32_t dir_cluster,
+             start_cluster;
+    uint8_t  attribs;
+    t_FATContext *ctx;
+    char name[13];
+}; 
+
+struct t_FATContext {
     t_BootSectorCommon    boot_sector;
     union {
         t_BootSectorCommonExt  old_ext;
@@ -318,7 +330,9 @@ typedef struct {
      *  it here to avoid recalculation
      */
     uint32_t              bytes_p_clus;
-} t_FATContext;
+
+    t_FATHandle root;
+};
 
 #define SECTORS_PER_FAT(context) (            \
     (context)->boot_sector.sectors_per_fat    \
@@ -599,6 +613,9 @@ typedef struct {
 #define BYTES_PER_CLUSTER(ctx)\
     ((ctx)->boot_sector.bytes_per_sector * (ctx)->boot_sector.sectors_per_cluster)
 
+uint16_t FAT_get_date();
+uint16_t FAT_get_time();
+
 #endif
 
 typedef enum {
@@ -636,28 +653,40 @@ typedef enum {
     ENTRY_ATTR_MASK_LONG_NAME = ENTRY_ATTR_LONG_NAME | ENTRY_ATTR_DIRECTORY | ENTRY_ATTR_ARCHIVE
 } e_DirEntryAttributes;
 
-uint16_t FAT_get_date();
-uint16_t FAT_get_time();
-
 #endif
 
 #ifndef _FAT_H_INTERNAL
 
-typedef struct t_FATContext t_FATContext;
-typedef struct t_FATFile    t_FATFile;
+typedef void *t_FATContext;
+typedef void *t_FATFile;
+typedef void *t_FATHandle;
 
-t_FATContext *FAT_context_init(storage_device_t *dev);
+t_FATContext *FAT_mount(storage_device_t *dev);
 
-void FAT_create(t_FATContext *ctx, const char *_path, uint32_t attribs);
+void FAT_unmount(t_FATContext *ctx);
 
-void FAT_remove(t_FATContext *ctx, const char *_path);
+t_FATHandle *FAT_get_root(t_FATContext *ctx);
 
-t_FATFile *FAT_open(t_FATContext *ctx, const char *path, uint8_t mode);
+t_FATHandle *FAT_lookup(t_FATContext *ctx, t_FATHandle *dir, const char *name);
+
+void FAT_create(t_FATHandle *dir, const char *name, uint8_t attribs);
+
+void FAT_remove(t_FATHandle *file);
+
+t_FATFile *FAT_open(t_FATHandle *handle, uint8_t mode);
 
 void FAT_close(t_FATFile *file);
 
 size_t FAT_write(t_FATFile *file, size_t len, void *data);
 
 size_t FAT_read(t_FATFile *file, size_t len, void *data);
+
+t_FATHandle *FAT_read_dir(t_FATHandle *dir, size_t n);
+
+const char *FAT_handle_name(t_FATHandle *handle);
+
+void FAT_file_stat(t_FATHandle *file, t_FileStat *out);
+
+void FAT_init();
 
 #endif
