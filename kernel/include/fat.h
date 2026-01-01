@@ -667,7 +667,7 @@ void FAT_unmount(t_FATContext *ctx);
 
 t_FATHandle *FAT_get_root(t_FATContext *ctx);
 
-t_FATHandle *FAT_lookup(t_FATContext *ctx, t_FATHandle *dir, const char *name);
+t_FATHandle *FAT_lookup(t_FATHandle *dir, const char *name);
 
 void FAT_create(t_FATHandle *dir, const char *name, uint8_t attribs);
 

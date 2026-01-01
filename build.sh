@@ -14,12 +14,11 @@
 #       debug                                                            #
 #             build with debug flags and launch qemu on pause            #
 #             qemu pauses waiting for GDB server connection              #
-#       debug-fat                                                        #
+#       debug-fat-fd                                                     #
 #             create a 1.44MB 3.5" floppy-disk image initialized to 0    #
 #             format it as a FAT filesystem                              #
 #             virtually mount the image on the next available drive      #
-#       log                                                              #
-#             pass flags to qemu to log CPU state when interrupt raised  #
+#       log                                                              # #             pass flags to qemu to log CPU state when interrupt raised  #
 ##########################################################################
 
 if [[ $(uname) == "Darwin" ]]; then
@@ -123,6 +122,7 @@ $compiler_path -c libc/string/strtok.c    -o strtok.o     $c_flags
 $compiler_path -c libc/string/strpbrk.c   -o strpbrk.o    $c_flags
 $compiler_path -c libc/string/strdup.c    -o strdup.o     $c_flags
 $compiler_path -c libc/string/strcpy.c    -o strcpy.o     $c_flags
+$compiler_path -c libc/string/strcmp.c    -o strcmp.o     $c_flags
 
 $assemble_path kernel/asm/boot.s          -o boot.o       $s_flags
 $assemble_path kernel/asm/crti.s          -o crti.o       $s_flags

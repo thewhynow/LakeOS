@@ -53,9 +53,9 @@ typedef struct {
 
 typedef enum {
     FILE_ATTRIB_DIRECTORY = 1,
-    FILE_ATTRIB_READ_ONLY,
-    FILE_ATTRIB_HIDDEN,
-    FILE_ATTRIB_SYSTEM
+    FILE_ATTRIB_READ_ONLY = 2,
+    FILE_ATTRIB_HIDDEN    = 4,
+    FILE_ATTRIB_SYSTEM    = 8
 } e_FileAttribs;
 
 typedef struct {
@@ -166,6 +166,33 @@ void VFS_register_fs(t_VFSOperations *ops);
 
 void VFS_curr_chrono(t_FileChrono *out);
 
+/**
+ * VFS PUBLIC API START
+ */
+
+void *VFS_open(const char *path, uint8_t mode);
+void VFS_close(void *descriptor);
+
+size_t VFS_write(void *descriptor, void *data, size_t len);
+size_t VFS_read(void *descriptor, void *data, size_t len);
+
+void VFS_create(const char *path, uint8_t attributes);
+void VFS_remove(const char *path);
+
+/**
+ * modes used for opening files
+ */
+
+typedef enum {
+    VFS_FILE_READ  = 0b00000001,
+    VFS_FILE_WRITE = 0b00000010,
+    VFS_FILE_APPND = 0b00000100,
+    VFS_FILE_EOF   = 0b00001000
+} e_VFSFILEMODES;
+
+/**
+ * VFS PUBLIC API END
+ */
 
 #endif
 
@@ -186,7 +213,56 @@ typedef struct t_VFSNode {
     t_VFSOperations *driver; 
 } t_VFSNode;
 
-size_t VFS_create(t_VFSNode *parent, const char *name, uint8_t attribs);
+/**
+ * a file descriptor object which
+ * 	serves as the final layer of
+ * 	abstraction for files in the
+ * 	operating systems - this will
+ * 	be the final descriptor returned
+ * 	in userspace when users want
+ * 	to interact with a file
+ */
+typedef struct t_FileDescriptor {
+	t_FSFile descriptor;
+	t_VFSOperations *driver
+} t_FileDescriptor;
+
+/**
+ * creates a file using the VFS -> FS API,
+ * 	uses the filesystem of the parent file
+ */
+size_t VFS_make_file
+	(t_VFSNode *parent, const char *name, uint8_t attribs);
+
+/**
+ * returns a vnode to a file with given name that
+ * 	is contained in the parent vnode directory
+ */
 t_VFSNode *VFS_lookup(t_VFSNode *parent, const char *name);
+
+/** 
+ * returns a vnode to a file represented
+ * 	by the given string path
+ */
 t_VFSNode *VFS_walk_path(const char *_path);
+
+/**
+ * makes and allocates a new vnode given the parent vnode
+ * 	and the underlying handle
+ */
+t_VFSNode *VFS_make_vnode(t_VFSNode *parent, t_FSNode *handle);
+
+/**
+ * inserts a vnode into a directory vnode
+ */
+void VFS_insert_vnode(t_VFSNode *parent, t_VFSNode *child);
+
+/**
+ * returns the name of the file in *out_fname and the
+ * 	vnode for the directory in the actual return
+ * 	value
+ */
+t_VFSNode *VFS_get_dir_and_fname(const char *_path, char **out_fname);
+
+
 #endif

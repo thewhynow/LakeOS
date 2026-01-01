@@ -1,6 +1,7 @@
 #define _KMM_H_INTERNAL
 #include "../include/kmm.h"
 #include "../../libc/include/string.h"
+#include "../../libc/include/stdio.h"
 
 static t_FreeBlock *freelist = HEAP_START;
 
@@ -11,7 +12,11 @@ void KMM_init(){
 }
 
 void *kmalloc(size_t bytes){
-    return find_first_fit(bytes);
+	void *res = find_first_fit(bytes);
+
+	printf("allocated %p\n", res);
+	
+	return res;
 }
 
 void *krealloc(void *p, size_t new_sz){
@@ -63,6 +68,8 @@ void kfree(void *p){
     fblock->prev = iter;
 
     coalesce_neighbors(fblock);
+
+	printf("unaocated %p\n", p);
 }
 
 size_t ksize(void *p){

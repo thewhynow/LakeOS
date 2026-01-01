@@ -793,10 +793,10 @@ t_FATHandle *FAT_get_root(t_FATContext *ctx){
     return &ctx->root;
 }
 
-t_FATHandle *FAT_lookup(t_FATContext *ctx, t_FATHandle *dir, const char *name){
+t_FATHandle *FAT_lookup(t_FATHandle *dir, const char *name){
     t_ShortDirEntry entry;
     t_FATHandle temp = (t_FATHandle){
-        .ctx = ctx,
+        .ctx = dir->ctx,
         .dir_cluster = dir->start_cluster
     };
     memcpy(temp.name, name, 11);
@@ -883,7 +883,7 @@ t_FATFile *FAT_open(t_FATHandle *handle, uint8_t mode){
 void FAT_close(t_FATFile *file){
     FAT_upd_entry(file->ctx, file);
 
-    kfree(file);
+	kfree(file);
 }
 
 size_t FAT_write(t_FATFile *file, size_t len, void *data){
@@ -1019,4 +1019,5 @@ void FAT_init(){
         .f_Stat     = (void*)FAT_file_stat
     };
     VFS_register_fs(&driver);
+
 }

@@ -15,6 +15,7 @@
 #include "../include/kmm.h"
 #include "../include/rtc.h"
 #include "../include/vfs.h"
+#include "../include/vfm.h"
 
 void kernel_main() {
     terminal_init();
@@ -57,6 +58,9 @@ void kernel_main() {
     printf("Loading FAT...");
     FAT_init();
     printf("FAT Loaded!\n");
+	printf("Loading VFM...");
+	VFM_init();
+	printf("VFM Loaded!\n");
     printf("Loading VFS...\n");
     VFS_init();
     printf("VFS Loaded!\n");
@@ -65,8 +69,30 @@ void kernel_main() {
     printf("the time is %d:%d:%d\n", time.hours, time.minutes,  time.seconds);
 
     printf("Welcome to lakeOS!\n");
+
+	VFS_create("/HELLO.TXT", 0);		
+
+	void *descriptor = VFS_open("/HELLO.TXT", VFS_FILE_WRITE);
+
+	VFS_write(descriptor, "HELLO, WORLD!", 14);
+
+	VFS_close(descriptor);
+
+	descriptor = VFS_open("/HELLO.TXT", VFS_FILE_READ);
     
     char *string = kmalloc(100);
+
+	VFS_read(descriptor, string, 14);
+
+	printf("%s\n", string);
+
+	/* TODO: issue with freeing memory somewhere in these two functions - no disparities with kmalloc / kfree */
+
+//	VFS_close(descriptor);
+
+//	VFS_remove("/HELLO.TXT");
+
+	printf("made it through!\n");
     
     while (true) {
         gets(string);
