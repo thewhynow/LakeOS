@@ -43,9 +43,9 @@ void VFS_mount_root(t_FSContext *fs, t_VFSOperations *fsops){
 }
 
 void VFS_init_rootfs(){
-    vfs_root.driver->f_Create(vfs_root.handle, "USER",      FILE_ATTRIB_DIRECTORY);
-    vfs_root.driver->f_Create(vfs_root.handle, "BIN",       FILE_ATTRIB_DIRECTORY);
-    vfs_root.driver->f_Create(vfs_root.handle, "SYS",       FILE_ATTRIB_DIRECTORY);
+    vfs_root.driver->f_Create(vfs_root.handle, "USER", FILE_ATTRIB_DIRECTORY);
+    vfs_root.driver->f_Create(vfs_root.handle, "BIN",  FILE_ATTRIB_DIRECTORY);
+    vfs_root.driver->f_Create(vfs_root.handle, "SYS",  FILE_ATTRIB_DIRECTORY);
 
 	/* initialize the VIRT directory */
 	
@@ -127,10 +127,16 @@ t_VFSNode *VFS_get_dir_and_fname(const char *_path, char **out_fname){
 	int i = strlen(path) - 1;
 
 	for (; i >= 0; --i)
-		if (path[i] == '/')
+		if (path[i] == '/'){
 			path[i] = '\0';
+			break;
+		}
 
-	*out_fname = (char*)_path + i + 2; 
+	//while (path[i] != '/')
+	//	--i;
+	//path[i] = '\0';
+
+	*out_fname = (char*)_path + i + 1; 
 
 	t_VFSNode *dir = VFS_walk_path(path);
 

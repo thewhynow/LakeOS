@@ -14,11 +14,15 @@
 #       debug                                                            #
 #             build with debug flags and launch qemu on pause            #
 #             qemu pauses waiting for GDB server connection              #
+#             to connect on GDB server use command:						 #
+#             	(~/)  gdb lakeos.elf									 #
+#             	(gdb) target remote 1234								 #
 #       debug-fat-fd                                                     #
 #             create a 1.44MB 3.5" floppy-disk image initialized to 0    #
 #             format it as a FAT filesystem                              #
 #             virtually mount the image on the next available drive      #
-#       log                                                              # #             pass flags to qemu to log CPU state when interrupt raised  #
+#       log                                                              #
+#             pass flags to qemu to log CPU state when interrupt raised  #
 ##########################################################################
 
 if [[ $(uname) == "Darwin" ]]; then
@@ -150,3 +154,5 @@ done
 for ((i=1; i<h_index; i++)); do
     rm harddisk${i}.img
 done
+
+rm iso/boot/lakeos.elf

@@ -14,11 +14,10 @@ void KMM_init(){
 void *kmalloc(size_t bytes){
 	void *res = find_first_fit(bytes);
 
-	printf("allocated %p\n", res);
+	printf("allocated %p, %d\n", res, (int) ksize(res));
 	
 	return res;
 }
-
 void *krealloc(void *p, size_t new_sz){
     if (!p) return kmalloc(new_sz);
     size_t alloc_sz = *((size_t*)p - 1);
@@ -48,6 +47,8 @@ void *kexpand(void *p, size_t increment){
 }
 
 void kfree(void *p){
+	printf("freeeeeed %p, %d\n", p, (int) ksize(p));
+
     t_FreeBlock 
         *next,
         *iter   = freelist,
@@ -56,7 +57,7 @@ void kfree(void *p){
     /* keep blocks sequential */
     
     if (iter != iter->next)
-        while (iter->next < fblock) 
+        while (iter->next < fblock && iter->next > iter) 
             iter = iter->next;
 
     next = iter->next;
@@ -68,8 +69,6 @@ void kfree(void *p){
     fblock->prev = iter;
 
     coalesce_neighbors(fblock);
-
-	printf("unaocated %p\n", p);
 }
 
 size_t ksize(void *p){

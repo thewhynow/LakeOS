@@ -154,6 +154,8 @@ void VMM_init() {
     bitmap += 0xC0000000;
     
     flush_pd();
+
+	valloc_page((void*) 0xD0000000); /* temporary bullshit */
 }
 
 void ISR_page_flt_handler(registers_t *regs){

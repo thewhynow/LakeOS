@@ -419,8 +419,16 @@ t_FATContext *FAT_mount(storage_device_t *dev){
  * follows the FAT cluster chain.. essentially
  */
 uint32_t FAT_absolute_offset(t_FATContext *ctx, uint32_t cluster, size_t offset, uint32_t *clus_fail){
-    if (cluster < 2)
+    if (cluster < 2){
+		size_t root_dir_size = 
+			ctx->boot_sector.bytes_per_sector * sizeof(t_ShortDirEntry);
+		
+		if (offset > root_dir_size)
+			return 0;
+
         return RootDirSector(ctx) * ctx->boot_sector.bytes_per_sector + offset;
+
+	}
 
     if (offset < ctx->bytes_p_clus)
         return FAT_clus_to_off(ctx, cluster) + offset;
