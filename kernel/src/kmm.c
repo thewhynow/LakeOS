@@ -14,8 +14,6 @@ void KMM_init(){
 void *kmalloc(size_t bytes){
 	void *res = find_first_fit(bytes);
 
-	printf("allocated %p, %d\n", res, (int) ksize(res));
-	
 	return res;
 }
 void *krealloc(void *p, size_t new_sz){
@@ -23,16 +21,20 @@ void *krealloc(void *p, size_t new_sz){
     size_t alloc_sz = *((size_t*)p - 1);
     if (new_sz <= alloc_sz) return p;
 
-    for (t_FreeBlock *iter = freelist; iter->next != freelist; iter = iter->next){
-        if (iter == p + alloc_sz){
+    t_FreeBlock *iter = freelist;
+    do {
+        if (iter == p - sizeof(size_t) + alloc_sz && iter->size >= new_sz - alloc_sz){
             size_t offset = new_sz - alloc_sz;
-            memcpy((void*)iter + offset, iter, sizeof *iter);
-            iter = (void*)iter + offset;
-            iter->size -= offset;
+            t_FreeBlock *moved = (void*)iter + offset;
+            memcpy(moved, iter, sizeof *iter);
+            moved->size -= offset;
+            moved->prev->next = moved;
+            moved->next->prev = moved;
             *((size_t*)p - 1) = new_sz;
             return p;
         }
-    }
+        iter = iter->next;
+    } while (iter != freelist);
 
     void *new = kmalloc(new_sz);
     memcpy(new, p, alloc_sz);
@@ -47,8 +49,6 @@ void *kexpand(void *p, size_t increment){
 }
 
 void kfree(void *p){
-	printf("freeeeeed %p, %d\n", p, (int) ksize(p));
-
     t_FreeBlock 
         *next,
         *iter   = freelist,
@@ -103,6 +103,7 @@ void *find_first_fit(size_t bytes){
         if (iter->size >= bytes){
             ret = (size_t*)iter;
             iter->prev->next = iter->next;
+			iter->next->prev = iter->prev;
             *ret = bytes;
             return ret + 1;
         }
@@ -118,18 +119,18 @@ void coalesce_neighbors(t_FreeBlock *block){
                 *next = block->next;
     
     /* nothing to coalesce if only one block exists */
-    if (block->next == block || block->prev == block)
+	if (block->next == block || block->prev == block)
         return;
 
-    if ((uint8_t*)block + block->size == (uint8_t*)next){
+	if ((uint8_t*)block + block->size == (uint8_t*)next){
         /* merge 'next' */
         next->next->prev = block;     
         block->next = next->next;
 
         block->size += next->size;
-    }
+    } 
 
-    if ((uint8_t*)prev + prev->size == (uint8_t*)block){
+	else if ((uint8_t*)prev + prev->size == (uint8_t*)block){
         /* merge 'block' */
         prev->next = next;
         next->prev = prev;

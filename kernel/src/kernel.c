@@ -18,18 +18,12 @@
 #include "../include/vfm.h"
 
 void do_bullshit(){
-	/**
-	 * TODO:
-	 * 	issue in VFS_walk_path or something with multi-layered directories
-	 */
 	VFS_create("/USER/THEWHYNOW", FILE_ATTRIB_DIRECTORY);
-	/*
 	VFS_create("/USER/THEWHYNOW/BULL.TXT", 0);
-	void *file = VFS_open("/USER/THEWHYNOW/BULL.TXT", VFS_FILE_WRITE);
+	void *file = VFS_open("/USER/TWHYNOW/BULL.TXT", VFS_FILE_WRITE);
 	const char *str = "I FUCKING HATE BULLSHIT";
 	VFS_write(file, (void*) str, strlen(str));
 	VFS_close(file);
-	*/
 }
 
 void kernel_main() {
