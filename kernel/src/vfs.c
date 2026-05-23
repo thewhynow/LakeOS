@@ -167,7 +167,6 @@ t_VFSNode *VFS_lookup(t_VFSNode *parent, const char *name){
 
     return NULL;
 }
-
 /**
  * final vfs goddamn api
  */

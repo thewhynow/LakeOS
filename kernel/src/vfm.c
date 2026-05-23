@@ -108,8 +108,9 @@ t_VFMHandle *VFM_create(t_VFMFile *parent, const char *name, uint8_t attribs){
  * ... distinct from closing a virtual file
  */
 void VFM_remove(t_VFMHandle *file){
-    t_VFMFile *iter;
-    while (iter->next != file) iter = iter->next;
+    t_VFMFile *iter = vfm_files;
+    while (iter->next != file) 
+		iter = iter->next;
     iter->next = file->next;
 
 	/* remember, since the file and file handle are the same thing */

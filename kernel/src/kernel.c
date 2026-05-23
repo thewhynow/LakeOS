@@ -17,66 +17,57 @@
 #include "../include/vfs.h"
 #include "../include/vfm.h"
 
-void do_bullshit(){
-	VFS_create("/USER/THEWHYNOW", FILE_ATTRIB_DIRECTORY);
-	VFS_create("/USER/THEWHYNOW/BULL.TXT", 0);
-	void *file = VFS_open("/USER/TWHYNOW/BULL.TXT", VFS_FILE_WRITE);
-	const char *str = "I FUCKING HATE BULLSHIT";
-	VFS_write(file, (void*) str, strlen(str));
-	VFS_close(file);
-}
-
 void kernel_main() {
     terminal_init();
-    //printf("Loading GDT...");
+    printf("Loading GDT...");
     GDT_init();
-    //printf("GDT Loaded!\n"); //printf("Loading IDT...");
+    printf("GDT Loaded!\n"); 
+	printf("Loading IDT...");
     IDT_init();
-    //printf("IDT Loaded!\n");
-    //printf("Loading ISR...");
+    printf("IDT Loaded!\n");
+    printf("Loading ISR...");
     ISR_init();
-    //printf("ISR Loaded!\n");
-    //printf("Loading IRQ...");
+    printf("ISR Loaded!\n");
+    printf("Loading IRQ...");
     IRQ_init();
-    //printf("IRQ Loaded!\n");
-    //printf("Loading RTC...");
+    printf("IRQ Loaded!\n");
+    printf("Loading RTC...");
     RTC_init();
-    //printf("RTC Loaded!\n");
-    //printf("Loading PIT...");
+    printf("RTC Loaded!\n");
+    printf("Loading PIT...");
     PIT_init();
-    //printf("PIT Loaded!\n");
-    //printf("Loading PMM...");
+    printf("PIT Loaded!\n");
+    printf("Loading PMM...");
     PMM_init();
-    //printf("PMM Loaded!\n");
-    //printf("Loading VMM...");
+    printf("PMM Loaded!\n");
+    printf("Loading VMM...");
     VMM_init();
-    //printf("VMM Loaded!\n");
-    //printf("Loading KMM...");
+    printf("VMM Loaded!\n");
+    printf("Loading KMM...");
     KMM_init();
-    //printf("KMM Loaded!\n");
-    //printf("Loading SAL...");
+    printf("KMM Loaded!\n");
+    printf("Loading SAL...");
     SAL_init();
-    //printf("SAL Loaded!\n");
-    //printf("Loading FDC...");
+    printf("SAL Loaded!\n");
+    printf("Loading FDC...");
     FDC_init();
-    //printf("FDC Loaded!\n");
-    //printf("Loading IDE...");
+    printf("FDC Loaded!\n");
+    printf("Loading IDE...");
     IDE_init();
-    //printf("IDE Loaded!\n");
-    //printf("Loading FAT...");
+    printf("IDE Loaded!\n");
+    printf("Loading FAT...");
     FAT_init();
-    //printf("FAT Loaded!\n");
-	//printf("Loading VFM...");
+    printf("FAT Loaded!\n");
+	printf("Loading VFM...");
 	VFM_init();
-	//printf("VFM Loaded!\n");
-    //printf("Loading VFS...\n");
+	printf("VFM Loaded!\n");
+    printf("Loading VFS...\n");
     VFS_init();
-    //printf("VFS Loaded!\n//");
+    printf("VFS Loaded!\n");
 
-    //printf("the date is %d/%d/%d\n", time.month, time.monthday, time.year);
-    //printf("the time is %d:%d:%d\n", time.hours, time.minutes,  time.seconds);
+    printf("the date is %d/%d/%d\n", time.month, time.monthday, time.year); printf("the time is %d:%d:%d\n", time.hours, time.minutes,  time.seconds);
 
-    //printf("Welcome to lakeOS!\n");
+    printf("Welcome to lakeOS!\n");
 
 	VFS_create("/HELLO.TXT", 0);		
 
@@ -98,8 +89,19 @@ void kernel_main() {
 
 	VFS_remove("/HELLO.TXT");
 
-	do_bullshit();
-    
+	strcpy(string, "");
+
+   	/* testing out virtual files */ 
+	VFS_create("/VIRT/TEST.TXT", 0);
+	/**
+	 * issue in memcpy when creating a new virtual files...
+	 * no idea if the issue is a memory bug (PLEASE DON'T)
+	 */
+	descriptor = VFS_open("/VIRT/TEST.TXT", VFS_FILE_WRITE | VFS_FILE_READ);
+	VFS_write(descriptor, "no way", 7);
+	VFS_read(descriptor, string, 7);
+	printf("%s\n", string);
+
     while (true) {
         gets(string);
         printf("string: %s\n", string);
