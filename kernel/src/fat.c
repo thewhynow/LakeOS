@@ -895,7 +895,7 @@ void FAT_close(t_FATFile *file){
 }
 
 size_t FAT_write(t_FATFile *file, size_t len, void *data){
-    if (!(file->flags | FAT_FILE_WRITE)) return 0;
+    if (!(file->flags & FAT_FILE_WRITE)) return 0;
     t_FATContext *ctx = file->ctx;
     size_t full_off = FAT_absolute_offset(ctx, file->starting_clus, file->size, NULL),
            bytes_written = 0, 
@@ -935,7 +935,7 @@ size_t FAT_write(t_FATFile *file, size_t len, void *data){
 }
 
 size_t FAT_read(t_FATFile *file, size_t len, void *data){
-    if (!(file->flags | FAT_FILE_READ)) return 0;
+    if (!(file->flags & FAT_FILE_READ)) return 0;
     t_FATContext *ctx = file->ctx;
     size_t full_off = FAT_absolute_offset(ctx, file->starting_clus, file->position, NULL),
            bytes_read = 0, 
@@ -1002,10 +1002,10 @@ void FAT_file_stat(t_FATHandle *file, t_FileStat *out){
     FAT_conv_to_chrono(entry.last_write_date, entry.last_write_time, &out->modified);
     out->size = entry.file_size;
     out->flags = 0;
-    if (entry.attributes | ENTRY_ATTR_DIRECTORY) out->flags |= FILE_ATTRIB_DIRECTORY;
-    if (entry.attributes | ENTRY_ATTR_READ_ONLY) out->flags |= FILE_ATTRIB_READ_ONLY;
-    if (entry.attributes | ENTRY_ATTR_HIDDEN)    out->flags |= FILE_ATTRIB_HIDDEN;
-    if (entry.attributes | ENTRY_ATTR_SYSTEM)    out->flags |= FILE_ATTRIB_SYSTEM;
+    if (entry.attributes & ENTRY_ATTR_DIRECTORY) out->flags |= FILE_ATTRIB_DIRECTORY;
+    if (entry.attributes & ENTRY_ATTR_READ_ONLY) out->flags |= FILE_ATTRIB_READ_ONLY;
+    if (entry.attributes & ENTRY_ATTR_HIDDEN)    out->flags |= FILE_ATTRIB_HIDDEN;
+    if (entry.attributes & ENTRY_ATTR_SYSTEM)    out->flags |= FILE_ATTRIB_SYSTEM;
 }
 
 
