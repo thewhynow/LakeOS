@@ -1,10 +1,10 @@
-#include "../include/stdio.h"
-#include "../include/string.h"
+#include <stdio.h>
+#include <string.h>
 
-#ifdef _KERNEL_LIBC
+#ifdef __is_libk
 
-#include "../../kernel/include/tty.h"
-#include "../../kernel/include/ps2.h"
+#include <kernel/tty.h>
+#include <kernel/ps2.h>
 
 int getchar(){
     char* buff = PS2_read();
@@ -13,6 +13,7 @@ int getchar(){
     memmove(buff, buff + 1, PS2_STDIN_SIZE - 1);
     return c;
 }
+
 #else
 
 /* todo: implement files XD */

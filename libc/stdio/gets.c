@@ -1,20 +1,21 @@
-#include "../include/stdio.h"
-#include "../include/string.h"
+#include <stdio.h>
+#include <string.h>
 
-#ifdef _KERNEL_LIBC
-#include "../../kernel/include/tty.h"
-#include "../../kernel/include/ps2.h"
+#ifdef __is_libk
 
-char* gets(char* str){
-    char* buff = PS2_read();
-    terminal_putchar('\n');
+#include <kernel/ps2.h>
+#include <kernel/tty.h>
 
-    size_t len = strlen(buff);
-    memcpy(str, buff, len);
+char *gets(char *str) {
+  char *buff = PS2_read();
+  terminal_putchar('\n');
 
-    memmove(buff, buff + len, PS2_STDIN_SIZE - len);
+  size_t len = strlen(buff);
+  memcpy(str, buff, len);
 
-    return str;
+  memmove(buff, buff + len, PS2_STDIN_SIZE - len);
+
+  return str;
 }
 #else
 

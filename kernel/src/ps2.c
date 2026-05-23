@@ -1,4 +1,4 @@
-#include "../include/ps2.h"
+#include <kernel/ps2.h>
 
 typedef enum {
     PS2_ESCAPE = 0x01,

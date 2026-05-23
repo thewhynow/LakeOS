@@ -1,5 +1,5 @@
-#include "../include/dma.h"
-#include "../include/io.h"
+#include <kernel/dma.h>
+#include <kernel/io.h>
 
 void DMA_init(){
     port_write_byte(DMA1_COMMAND_REG, 0x0);

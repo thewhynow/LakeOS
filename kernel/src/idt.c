@@ -1,4 +1,4 @@
-#include "../include/idt.h"
+#include <kernel/idt.h>
 
 IDT_entry_t IDT[256];
 

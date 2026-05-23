@@ -1,4 +1,4 @@
-#include "../include/multiboot.h"
+#include <kernel/multiboot.h>
 
 multiboot_info_t* multiboot_info;
 

@@ -1,4 +1,4 @@
-#include "../include/io.h"
+#include <kernel/io.h>
 
 void port_write_byte(uint16_t port, uint8_t data){
     asm volatile("outb %0, %1" : : "a" (data), "Nd" (port));

@@ -1,7 +1,7 @@
 #define _KMM_H_INTERNAL
-#include "../include/kmm.h"
-#include "../../libc/include/string.h"
-#include "../../libc/include/stdio.h"
+#include <kernel/kmm.h>
+#include <string.h>
+#include <stdio.h>
 
 static t_FreeBlock *freelist = HEAP_START;
 

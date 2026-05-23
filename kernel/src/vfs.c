@@ -1,11 +1,11 @@
-#include "../include/kmm.h"
-#include "../include/rtc.h"
-#include "../include/vfm.h"
-#include "../../libc/include/string.h"
-#include "../../libc/include/stdio.h"
+#include <kernel/kmm.h>
+#include <kernel/rtc.h>
+#include <kernel/vfm.h>
+#include <string.h>
+#include <stdio.h>
 
 #define _VFS_H_INTERNAL
-#include "../include/vfs.h"
+#include <kernel/vfs.h>
 #undef _VFS_H_INTERNAL
 
 /**

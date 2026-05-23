@@ -1,9 +1,9 @@
 #define _RTC_H_INTERNAL
 #define _PIT_H_INTERNAL
-#include "../include/rtc.h"
-#include "../include/pit.h"
-#include "../include/io.h"
-#include "../../libc/include/stdlib.h"
+#include <kernel/rtc.h>
+#include <kernel/pit.h>
+#include <kernel/io.h>
+#include <stdlib.h>
 
 t_RTCTime time;
 

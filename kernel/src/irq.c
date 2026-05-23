@@ -1,4 +1,4 @@
-#include "../include/irq.h"
+#include <kernel/irq.h>
 
 void IRQ_time_handler();
 void IRQ_keyboard_handler();

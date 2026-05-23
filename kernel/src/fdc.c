@@ -1,12 +1,12 @@
 #define _FDC_H_INTERNAL
 
-#include "../include/fdc.h"
-#include "../include/irq.h"
-#include "../include/pic.h"
-#include "../include/dma.h"
-#include "../include/pmm.h"
-#include "../include/vmm.h"
-#include "../include/sal.h"
+#include <kernel/fdc.h>
+#include <kernel/irq.h>
+#include <kernel/pic.h>
+#include <kernel/dma.h>
+#include <kernel/pmm.h>
+#include <kernel/vmm.h>
+#include <kernel/sal.h>
 
 static bool floppy_irq_fired;
 

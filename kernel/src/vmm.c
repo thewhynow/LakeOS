@@ -1,7 +1,7 @@
-#include "../include/vmm.h"
-#include "../include/pmm.h"
-#include "../../libc/include/string.h"
-#include "../include/isr.h"
+#include <kernel/vmm.h>
+#include <kernel/pmm.h>
+#include <string.h>
+#include <kernel/isr.h>
 
 #define ENTRIES_PER_STRUCT 1024
 

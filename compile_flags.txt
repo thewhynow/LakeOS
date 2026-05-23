@@ -1,0 +1,10 @@
+-std=gnu99
+-ffreestanding
+-D__is_libk
+-nostdlib
+-O0
+-w
+-g
+-Ikernel/include
+-Ilibc/include
+

@@ -1,4 +1,4 @@
-#include "../include/pic.h"
+#include <kernel/pic.h>
 
 /*
 Initialization Control Word 1

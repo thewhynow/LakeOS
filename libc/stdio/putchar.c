@@ -1,12 +1,19 @@
-#include "../include/stdio.h"
-#include "../../kernel/include/tty.h"
+#include <stdio.h>
 
-int putchar(int ic){
-    char c = (char)ic;
-    #ifdef _KERNEL_LIBC
-    terminal_putchar(c);
-    #else
-    /* implement stdout */
-    #endif
-    return ic;
+#ifdef __is_libk
+
+#include <kernel/tty.h>
+
+int putchar(int c){
+	terminal_putchar(c);		
+	return c;
 }
+
+#else
+
+/**
+ * implement userspace (no biggie)
+ */
+
+#endif
+

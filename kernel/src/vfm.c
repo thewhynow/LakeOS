@@ -1,8 +1,9 @@
 #define _VFM_H_INTERNAL
-#include "../include/vfm.h"
-#include "../include/rtc.h"
-#include "../include/kmm.h"
-#include "../../libc/include/string.h"
+#include <kernel/vfm.h>
+#include <kernel/rtc.h>
+#include <kernel/kmm.h>
+#include <string.h>
+#include <stdio.h>
 
 static t_FileChrono vfm_start_chrono;
 static t_VFMFile *vfm_files;
@@ -96,7 +97,7 @@ t_VFMHandle *VFM_create(t_VFMFile *parent, const char *name, uint8_t attribs){
         .opflags = 0,
         .fileflags = attribs, .modified = vfm_start_chrono
     };
-    memcpy(new->name, name, strlen(name));
+    strcpy(new->name, name);
     t_VFMHandle *handle = kmalloc(sizeof(t_VFMHandle)); 
     
     handle = new;

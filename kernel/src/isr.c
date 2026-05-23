@@ -1,4 +1,4 @@
-#include "../include/isr.h"
+#include <kernel/isr.h>
 void ISR0();
 void ISR1();
 void ISR2();

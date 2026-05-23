@@ -1,4 +1,4 @@
-#include "../include/pmm.h"
+#include <kernel/pmm.h>
 
 uint8_t* bitmap;
 /* stores the BITS (blocks) */

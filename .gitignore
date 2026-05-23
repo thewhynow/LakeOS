@@ -1,3 +1,6 @@
 fat.img
 .*
 !.gitignore
+kernel/*/*.swp
+libc/inc/*.swp
+libc/*/*.swp

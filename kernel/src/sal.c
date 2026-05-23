@@ -1,8 +1,8 @@
 #define _SAL_H_INTERNAL
 #define _ATA_H_INTERNAL
-#include "../include/sal.h"
-#include "../include/kmm.h"
-#include "../../libc/include/string.h"
+#include <kernel/sal.h>
+#include <kernel/kmm.h>
+#include <string.h>
 
 /*
 writes data to offset of sector

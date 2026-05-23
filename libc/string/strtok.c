@@ -1,6 +1,6 @@
 #include "../include/string.h"
 
-char *strtok(char *str, char *sep){
+char *strtok(char *str, const char *sep){
     static char *last;
 
     if (str) last = str;

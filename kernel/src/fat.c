@@ -1,11 +1,11 @@
 #define _FAT_H_INTERNAL
-#include "../include/fat.h"
-#include "../include/sal.h"
-#include "../include/kmm.h"
-#include "../include/rtc.h"
-#include "../../libc/include/stdlib.h"
-#include "../../libc/include/string.h"
-#include "../../libc/include/stdio.h"
+#include <kernel/fat.h>
+#include <kernel/sal.h>
+#include <kernel/kmm.h>
+#include <kernel/rtc.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
 
 /**
  * initializes context with the FAT type, assumes that

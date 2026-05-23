@@ -1,6 +1,6 @@
-#include "../include/pit.h"
-#include "../include/rtc.h"
-#include "../../libc/include/stdlib.h"
+#include <kernel/pit.h>
+#include <kernel/rtc.h>
+#include <stdlib.h>
 
 #define TIMER_IRQ 0x0
 

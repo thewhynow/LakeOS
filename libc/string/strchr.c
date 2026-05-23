@@ -1,13 +1,13 @@
 #include "../include/string.h"
 
-char *strchr(char *str, int chr){
+char *strchr(const char *str, int chr){
     while (*str)
         if (*str == chr)
-            return str;
+            return (char*) str;
         else
             ++str;
 
-    if (!chr) return str;
+    if (!chr) return (char*) str;
 
     return NULL;
 }

@@ -1,4 +1,4 @@
-#include "../include/gdt.h"
+#include <kernel/gdt.h>
 
 typedef struct {
     uint16_t limit_low;      /* limit: bits 0-15 */

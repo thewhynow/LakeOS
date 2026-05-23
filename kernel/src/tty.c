@@ -1,6 +1,6 @@
-#include "../../libc/include/string.h"
-#include "../include/tty.h"
-#include "../include/vga.h"
+#include <string.h>
+#include <kernel/tty.h>
+#include <kernel/vga.h>
 
 static const size_t TERMINAL_WIDTH = 80LU;
 static const size_t TERMINAL_HEIGHT = 25LU;
