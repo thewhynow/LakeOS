@@ -7,4 +7,6 @@
 -g
 -Ikernel/include
 -Ilibc/include
+-xc
+
 

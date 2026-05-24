@@ -64,8 +64,10 @@ _start:
 */
 .section .bss
     .align 16 /* stack must be 16-byte aligned according to System-V */
+    .global stack_bottom
     stack_bottom:
         .skip 16384 /* 16 KiB */
+    .global stack_top
     stack_top:
 
 .section .text

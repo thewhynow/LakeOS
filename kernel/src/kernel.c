@@ -10,6 +10,7 @@
 #include <kernel/pmm.h>
 #include <kernel/rtc.h>
 #include <kernel/sal.h>
+#include <kernel/tss.h>
 #include <kernel/tty.h>
 #include <kernel/vfm.h>
 #include <kernel/vfs.h>
@@ -18,6 +19,9 @@
 
 void kernel_main() {
   terminal_init();
+  printf("Loading TSS...");
+  TSS_init();
+  printf("TSS Loaded!\n");
   printf("Loading GDT...");
   GDT_init();
   printf("GDT Loaded!\n");
@@ -60,7 +64,7 @@ void kernel_main() {
   printf("Loading VFM...");
   VFM_init();
   printf("VFM Loaded!\n");
-  printf("Loading VFS...\n");
+  printf("Loading VFS...");
   VFS_init();
   printf("VFS Loaded!\n");
 
