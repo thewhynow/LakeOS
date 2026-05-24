@@ -27,7 +27,6 @@ isr_common:
     movw %ax, %es
     movw %ax, %fs
     movw %ax, %gs
-    movw %ax, %ss
 
     pushl %esp
     call ISR_handler
@@ -38,7 +37,6 @@ isr_common:
     movw %ax, %es
     movw %ax, %fs
     movw %ax, %gs
-    movw %ax, %ss
 
     popa
     add $8, %esp /* remove error code and int_num from stack */

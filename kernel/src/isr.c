@@ -257,22 +257,28 @@ void ISR254();
 void ISR255();
 
 void ISR_page_flt_handler(registers_t *regs);
+void ISR_syscall_handler(registers_t *regs);
 
 ISR_handler_t handlers[256];
 
 void ISR_init(){
     void ISR_init_gates();
     ISR_init_gates();
-    handlers[14] = ISR_page_flt_handler;
+
+    handlers[0xE] = ISR_page_flt_handler;
+    handlers[0x80] = ISR_syscall_handler;
+
     for (int i = 0; i < 256; ++i)
         IDT_enablegate(i);
 }
 
 void kernelpanic(){
+    #ifndef __APPLE__
     asm(
         "cli\n"
         "hlt\n"
     );
+    #endif
 }
 
 static const char* exception_msgs[32];
@@ -438,7 +444,7 @@ void ISR_init_gates(){
     IDT_setgate(125, ISR125, GDT_CODE_SEGMENT, IDT_FLAG_RING0 | IDT_FLAG_GATE_32BIT_INT);
     IDT_setgate(126, ISR126, GDT_CODE_SEGMENT, IDT_FLAG_RING0 | IDT_FLAG_GATE_32BIT_INT);
     IDT_setgate(127, ISR127, GDT_CODE_SEGMENT, IDT_FLAG_RING0 | IDT_FLAG_GATE_32BIT_INT);
-    IDT_setgate(128, ISR128, GDT_CODE_SEGMENT, IDT_FLAG_RING0 | IDT_FLAG_GATE_32BIT_INT);
+    IDT_setgate(128, ISR128, GDT_CODE_SEGMENT, IDT_FLAG_RING3 | IDT_FLAG_GATE_32BIT_INT);
     IDT_setgate(129, ISR129, GDT_CODE_SEGMENT, IDT_FLAG_RING0 | IDT_FLAG_GATE_32BIT_INT);
     IDT_setgate(130, ISR130, GDT_CODE_SEGMENT, IDT_FLAG_RING0 | IDT_FLAG_GATE_32BIT_INT);
     IDT_setgate(131, ISR131, GDT_CODE_SEGMENT, IDT_FLAG_RING0 | IDT_FLAG_GATE_32BIT_INT);

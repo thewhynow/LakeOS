@@ -73,43 +73,8 @@ void kernel_main() {
 
   printf("Welcome to lakeOS!\n");
 
-  VFS_create("/HELLO.TXT", 0);
+  printf("Warping into userspace...\n");
 
-  void *descriptor = VFS_open("/HELLO.TXT", VFS_FILE_WRITE);
-
-  VFS_write(descriptor, "HELLO, WORLD!", 14);
-
-  VFS_close(descriptor);
-
-  descriptor = VFS_open("/HELLO.TXT", VFS_FILE_READ);
-
-  char *string = kmalloc(100);
-
-  VFS_read(descriptor, string, 14);
-
-  printf("%s\n", string);
-
-  VFS_close(descriptor);
-
-  VFS_remove("/HELLO.TXT");
-
-  strcpy(string, "");
-
-  /* testing out virtual files */
-  VFS_create("/VIRT/TEST.TXT", 0);
-  descriptor = VFS_open("/VIRT/TEST.TXT", VFS_FILE_WRITE);
-  VFS_write(descriptor, "no way", 7);
-  VFS_close(descriptor);
-  descriptor = VFS_open("/VIRT/TEST.TXT", VFS_FILE_READ);
-  VFS_read(descriptor, string, 7);
-  printf("%s\n", string);
-
-  while (true) {
-    gets(string);
-    printf("string: %s\n", string);
-
-    if (!memcmp(string, "quit", 4))
-      for (;;)
-        ;
-  }
+  extern void jump_ring3();
+  jump_ring3();
 }

@@ -113,6 +113,7 @@ $compiler_path -c kernel/src/rtc.c -o rtc.o $c_flags
 $compiler_path -c kernel/src/vfs.c -o vfs.o $c_flags
 $compiler_path -c kernel/src/vfm.c -o vfm.o $c_flags
 $compiler_path -c kernel/src/tss.c -o tss.o $c_flags
+$compiler_path -c kernel/src/sys.c -o sys.o $c_flags
 
 $compiler_path -c libc/stdio/printf.c -o printf.o $c_flags
 $compiler_path -c libc/stdio/putchar.c -o putchar.o $c_flags
@@ -143,6 +144,7 @@ $assemble_path kernel/asm/idt.s -o _idt.o $s_flags
 $assemble_path kernel/asm/isr.s -o _isr.o $s_flags
 $assemble_path kernel/asm/irq.s -o _irq.o $s_flags
 $assemble_path kernel/asm/tss.s -o _tss.o $s_flags
+$assemble_path kernel/asm/user.s -o user.o $s_flags
 
 $compiler_path -T kernel/linker.ld -o iso/boot/lakeos.elf $c_flags -lgcc *.o
 

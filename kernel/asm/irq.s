@@ -20,7 +20,6 @@ common_irq:
     movw %ax, %es
     movw %ax, %fs
     movw %ax, %gs
-    movw %ax, %ss
 
     pushl %esp
     call IRQ_handler
@@ -31,7 +30,6 @@ common_irq:
     movw %ax, %es
     movw %ax, %fs
     movw %ax, %gs
-    movw %ax, %ss
 
     popa
     addl $4, %esp /* remove error code and irq_num from stack */

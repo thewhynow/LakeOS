@@ -61,6 +61,7 @@ void IRQ_init() {
         IDT_setgate(PIC_REMAP_OFFSET + 14, IRQ14, GDT_CODE_SEGMENT, IDT_FLAG_RING0 | IDT_FLAG_GATE_32BIT_INT | IDT_FLAG_PRESENT);
         IDT_setgate(PIC_REMAP_OFFSET + 15, IRQ15, GDT_CODE_SEGMENT, IDT_FLAG_RING0 | IDT_FLAG_GATE_32BIT_INT | IDT_FLAG_PRESENT);
     }
-
+    #ifndef __APPLE__
     asm volatile ("sti");
+    #endif
 }
