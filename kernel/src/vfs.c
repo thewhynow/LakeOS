@@ -42,18 +42,24 @@ void VFS_mount_root(t_FSContext *fs, t_VFSOperations *fsops){
     };
 }
 
+void VFS_init_virt(){
+	t_FSNode virt_root = VFM_root();
+	t_VFSNode *virt_root_vnode = VFS_make_vnode(&vfs_root, virt_root);
+	virt_root_vnode->driver = &vfm_vfs_ops;
+	VFS_insert_vnode(&vfs_root, virt_root_vnode); 
+
+  VFS_create("/VIRT/STDIN", 0);
+  VFS_create("/VIRT/STDOUT", 0);
+}
+
 void VFS_init_rootfs(){
     vfs_root.driver->f_Create(vfs_root.handle, "USER", FILE_ATTRIB_DIRECTORY);
     vfs_root.driver->f_Create(vfs_root.handle, "BIN",  FILE_ATTRIB_DIRECTORY);
     vfs_root.driver->f_Create(vfs_root.handle, "SYS",  FILE_ATTRIB_DIRECTORY);
 
-	/* initialize the VIRT directory */
-	
-	t_FSNode virt_root = VFM_root();
-	t_VFSNode *virt_root_vnode = VFS_make_vnode(&vfs_root, virt_root);
-	virt_root_vnode->driver = &vfm_vfs_ops;
-	VFS_insert_vnode(&vfs_root, virt_root_vnode);
+    VFS_init_virt();	
 }
+
 
 void VFS_init(){
     uint32_t num;
@@ -68,7 +74,7 @@ void VFS_init(){
         }
     }
 
-	VFS_init_rootfs();
+	  VFS_init_rootfs();
 }
 
 void VFS_curr_chrono(t_FileChrono *out){

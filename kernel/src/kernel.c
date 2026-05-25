@@ -68,8 +68,8 @@ void kernel_main() {
   VFS_init();
   printf("VFS Loaded!\n");
 
-  printf("the date is %d/%d/%d\n", time.month, time.monthday, time.year);
-  printf("the time is %d:%d:%d\n", time.hours, time.minutes, time.seconds);
+  printf("The date is %d/%d/%d\n", time.month, time.monthday, time.year);
+  printf("The time is %d:%d:%d\n", time.hours, time.minutes, time.seconds);
 
   printf("Welcome to lakeOS!\n");
 
