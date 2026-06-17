@@ -13,7 +13,7 @@ typedef struct t_VFMFile {
             fileflags;
 } t_VFMFile, 
 /* no reason to abstract handle beyond file */
-  t_VFMHandle;
+    t_VFMHandle;
 
 typedef struct {
     t_FileChrono start_chrono;

@@ -63,32 +63,32 @@ static int FDC_CMD_seek(uint8_t cyl, uint8_t head);
 
 typedef enum {
     FDC_DOR	 = 0x3F2,
-	FDC_MSR	 = 0x3F4,
-	FDC_FIFO = 0x3F5,
-	FDC_CTRL = 0x3F7
+    FDC_MSR	 = 0x3F4,
+    FDC_FIFO = 0x3F5,
+    FDC_CTRL = 0x3F7
 } FDC_IO;
 
 typedef enum {
     FDC_DOR_MASK_DRIVE0		  = 0b00000000,
-	FDC_DOR_MASK_DRIVE1		  =	0b00000001,
-	FDC_DOR_MASK_DRIVE2		  =	0b00000010,
-	FDC_DOR_MASK_DRIVE3		  =	0b00000011,
-	FDC_DOR_MASK_RESET		  =	0b00000100,
-	FDC_DOR_MASK_DMA		  =	0b00001000,
-	FDC_DOR_MASK_IRQ		  =	0b00000000,
-	FDC_DOR_MASK_DRIVE0_MOTOR =	0b00010000,
-	FDC_DOR_MASK_DRIVE1_MOTOR =	0b00100000,
-	FDC_DOR_MASK_DRIVE2_MOTOR =	0b01000000,
-	FDC_DOR_MASK_DRIVE3_MOTOR =	0b10000000
+    FDC_DOR_MASK_DRIVE1		  =	0b00000001,
+    FDC_DOR_MASK_DRIVE2		  =	0b00000010,
+    FDC_DOR_MASK_DRIVE3		  =	0b00000011,
+    FDC_DOR_MASK_RESET		  =	0b00000100,
+    FDC_DOR_MASK_DMA		  =	0b00001000,
+    FDC_DOR_MASK_IRQ		  =	0b00000000,
+    FDC_DOR_MASK_DRIVE0_MOTOR =	0b00010000,
+    FDC_DOR_MASK_DRIVE1_MOTOR =	0b00100000,
+    FDC_DOR_MASK_DRIVE2_MOTOR =	0b01000000,
+    FDC_DOR_MASK_DRIVE3_MOTOR =	0b10000000
 } FDC_DOR_MASK;
 
 typedef enum {
     FDC_MSR_MASK_DRIVE0_SEEK    = 0b00000001,
-	FDC_MSR_MASK_DRIVE1_SEEK    = 0b00000010,
-	FDC_MSR_MASK_DRIVE2_SEEK    = 0b00000100,
-	FDC_MSR_MASK_DRIVE3_SEEK    = 0b00001000,
-	FDC_MSR_MASK_BUSY   	    = 0b00010000,
-	FDC_MSR_MASK_IRQ_MODE	    = 0b00100000,
+    FDC_MSR_MASK_DRIVE1_SEEK    = 0b00000010,
+    FDC_MSR_MASK_DRIVE2_SEEK    = 0b00000100,
+    FDC_MSR_MASK_DRIVE3_SEEK    = 0b00001000,
+    FDC_MSR_MASK_BUSY   	    = 0b00010000,
+    FDC_MSR_MASK_IRQ_MODE	    = 0b00100000,
     FDC_MSR_MASK_HAS_DATA       = 0b01000000,
     FDC_MSR_MASK_DATA_READY     = 0b10000000
 } FDC_MSR_MASK;
@@ -133,7 +133,7 @@ typedef enum {
      *      Sector Size
      */
     FDC_CMD_READ_SECT	 = 0x6,
-	FDC_CMD_WRITE_SECT	 = 0x5,
+    FDC_CMD_WRITE_SECT	 = 0x5,
 
     /**
      * Fix Drive Data
@@ -147,7 +147,7 @@ typedef enum {
      *      https://www.isdaman.com/alsos/hardware/fdc/floppy.htm 
      *  return: None
      */
-	FDC_CMD_SPECIFY		 = 0x3,
+    FDC_CMD_SPECIFY		 = 0x3,
 
     /**
      * Check Drive Status
@@ -157,7 +157,7 @@ typedef enum {
      *  return:
      *      Status Register 3
      */
-	FDC_CMD_CHECK_STAT	 = 0x4,
+    FDC_CMD_CHECK_STAT	 = 0x4,
 
     /**
      * Calibrate Drive
@@ -167,8 +167,8 @@ typedef enum {
      *      x x x x x 0 DR1 DR0
      *  return: None
      */
-	FDC_CMD_CALIBRATE	 = 0x7,
-	
+    FDC_CMD_CALIBRATE	 = 0x7,
+
     /**
      * Check Interrupt Status
      *  check the status of the FDC when interrupt returns
@@ -189,26 +189,26 @@ typedef enum {
      *      Cylinder
      *  return: None
      */
-	FDC_CMD_SEEK		 = 0xF,
+    FDC_CMD_SEEK		 = 0xF,
 } FDC_COMMAND;
 
 typedef enum {
     FDC_CMD_EXT_SKIP       = 0b00100000,
-	FDC_CMD_EXT_DENSITY    = 0b01000000,
-	FDC_CMD_EXT_MULTITRACK = 0b10000000
+    FDC_CMD_EXT_DENSITY    = 0b01000000,
+    FDC_CMD_EXT_MULTITRACK = 0b10000000
 } FDC_COMMAND_EXT;
 
 typedef enum {
     FDC_CMD_GAP3_LENGTH_STD  = 42,
-	FDC_CMD_GAP3_LENGTH_5_14 = 32,
-	FDC_CMD_GAP3_LENGTH_3_5  = 27
+    FDC_CMD_GAP3_LENGTH_5_14 = 32,
+    FDC_CMD_GAP3_LENGTH_3_5  = 27
 } FDC_COMMAND_GAP3_LEN;
 
 typedef enum {
     FDC_CMD_DTL_128  = 0,
-	FDC_CMD_DTL_256  = 1,
-	FDC_CMD_DTL_512  = 2,
-	FDC_CMD_DTL_1024 = 4
+    FDC_CMD_DTL_256  = 1,
+    FDC_CMD_DTL_512  = 2,
+    FDC_CMD_DTL_1024 = 4
 } FDC_COMMAND_DTL;
 
 #endif

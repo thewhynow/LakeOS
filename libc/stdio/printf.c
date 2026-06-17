@@ -54,7 +54,7 @@ static bool printlong(long n){
 }
 
 static void printptr(void *ptr){
- uint32_t p = (uint32_t)(size_t)ptr;
+    uint32_t p = (uint32_t)(size_t)ptr;
     const char hex[] = "0123456789ABCDEF";
 
     putchar('0');

@@ -7,15 +7,15 @@
 #include <kernel/tty.h>
 
 char *gets(char *str) {
-  char *buff = PS2_read();
-  terminal_putchar('\n');
+    char *buff = PS2_read();
+    terminal_putchar('\n');
 
-  size_t len = strlen(buff);
-  memcpy(str, buff, len);
+    size_t len = strlen(buff);
+    memcpy(str, buff, len);
 
-  memmove(buff, buff + len, PS2_STDIN_SIZE - len);
+    memmove(buff, buff + len, PS2_STDIN_SIZE - len);
 
-  return str;
+    return str;
 }
 #else
 

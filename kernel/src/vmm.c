@@ -17,11 +17,11 @@
 #define PAGE_SIZE 4096
 
 typedef struct {
-  pt_entry_t entries[ENTRIES_PER_STRUCT];
+    pt_entry_t entries[ENTRIES_PER_STRUCT];
 } ptable_t;
 
 typedef struct {
-  pd_entry_t entries[ENTRIES_PER_STRUCT];
+    pd_entry_t entries[ENTRIES_PER_STRUCT];
 } pdirectory_t;
 
 extern pdirectory_t page_directory;
@@ -30,167 +30,167 @@ extern ptable_t higher_half_page_table;
 static void flush_pd() {
 /* to shut apple intellisense up */
 #ifndef __APPLE__
-  asm volatile("movl %%cr3, %%eax\n"
-               "movl %%eax, %%cr3\n" ::
-                   : "eax");
+    asm volatile("movl %%cr3, %%eax\n"
+                 "movl %%eax, %%cr3\n" ::
+                     : "eax");
 #endif
 }
 
 static void flush_tlb_entry(vaddr_t vaddr) {
 #ifndef __APPLE__
-  asm volatile("cli\n"
-               "invlpg (%0)\n"
-               "sti\n" ::"r"(vaddr)
-               : "memory");
+    asm volatile("cli\n"
+                 "invlpg (%0)\n"
+                 "sti\n" ::"r"(vaddr)
+                 : "memory");
 #endif
 }
 
 void *vmm_map_big_page(void *paddr, void *vaddr) {
-  pd_entry_t *pde = &page_directory.entries[PAGE_DIR_INDEX((size_t)vaddr)];
+    pd_entry_t *pde = &page_directory.entries[PAGE_DIR_INDEX((size_t)vaddr)];
 
-  ENTRY_ADD_ATTRIBUTE(*pde, PAGE_STRUCT_ENTRY_PRESENT);
-  ENTRY_ADD_ATTRIBUTE(*pde, PAGE_STRUCT_ENTRY_WRITEABLE);
-  ENTRY_SET_FRAME(*pde, (size_t)paddr);
+    ENTRY_ADD_ATTRIBUTE(*pde, PAGE_STRUCT_ENTRY_PRESENT);
+    ENTRY_ADD_ATTRIBUTE(*pde, PAGE_STRUCT_ENTRY_WRITEABLE);
+    ENTRY_SET_FRAME(*pde, (size_t)paddr);
 
-  flush_tlb_entry((size_t)vaddr);
+    flush_tlb_entry((size_t)vaddr);
 
-  return vaddr;
+    return vaddr;
 }
 
 void *vmm_map_page(void *paddr, void *vaddr, bool ring3) {
-  pd_entry_t *pdir_entry =
-      &page_directory.entries[PAGE_DIR_INDEX((uint32_t)vaddr)];
+    pd_entry_t *pdir_entry =
+        &page_directory.entries[PAGE_DIR_INDEX((uint32_t)vaddr)];
 
-  /* page table will be mapped to 0xC03FF000 */
-  ptable_t *ptable = (ptable_t *)0xC03FF000;
+    /* page table will be mapped to 0xC03FF000 */
+    ptable_t *ptable = (ptable_t *)0xC03FF000;
 
-  /* used to map the page table into memory */
-  pt_entry_t *map_ptable_entry =
-      &higher_half_page_table.entries[PAGE_TABLE_INDEX(0xC03FF000)];
+    /* used to map the page table into memory */
+    pt_entry_t *map_ptable_entry =
+        &higher_half_page_table.entries[PAGE_TABLE_INDEX(0xC03FF000)];
 
-  if (ring3)
-      ENTRY_ADD_ATTRIBUTE(*pdir_entry, PAGE_STRUCT_ENTRY_USER_ACCESS);
+    if (ring3)
+        ENTRY_ADD_ATTRIBUTE(*pdir_entry, PAGE_STRUCT_ENTRY_USER_ACCESS);
 
-  /* page table not present, allocate */
-  if (!ENTRY_GET_ATTRIBUTE(*pdir_entry, PAGE_STRUCT_ENTRY_PRESENT)) {
-    /* map the page table so it can be used */
-    ENTRY_SET_FRAME(*map_ptable_entry, alloc_page());
-    flush_tlb_entry(0xC03FF000);
+    /* page table not present, allocate */
+    if (!ENTRY_GET_ATTRIBUTE(*pdir_entry, PAGE_STRUCT_ENTRY_PRESENT)) {
+        /* map the page table so it can be used */
+        ENTRY_SET_FRAME(*map_ptable_entry, alloc_page());
+        flush_tlb_entry(0xC03FF000);
 
-    memset(ptable, 0, ENTRIES_PER_STRUCT * sizeof(pt_entry_t));
+        memset(ptable, 0, ENTRIES_PER_STRUCT * sizeof(pt_entry_t));
 
-    /* set new page table as writeable and present */
-    ENTRY_ADD_ATTRIBUTE(*pdir_entry, PAGE_STRUCT_ENTRY_PRESENT);
-    ENTRY_ADD_ATTRIBUTE(*pdir_entry, PAGE_STRUCT_ENTRY_WRITEABLE);
-    
-    ENTRY_SET_FRAME(*pdir_entry, ENTRY_GET_ATTRIBUTE(*map_ptable_entry,
-                                                     PAGE_STRUCT_PAGE_FRAME));
-  } else {
-    /* map the page table so it can be used */
-    ENTRY_SET_FRAME(*map_ptable_entry, PTE_FROM_PDIR(pdir_entry));
-    flush_tlb_entry(0xC03FF000);
-  }
+        /* set new page table as writeable and present */
+        ENTRY_ADD_ATTRIBUTE(*pdir_entry, PAGE_STRUCT_ENTRY_PRESENT);
+        ENTRY_ADD_ATTRIBUTE(*pdir_entry, PAGE_STRUCT_ENTRY_WRITEABLE);
 
-  /* get the page table entry from the page table */
-  pt_entry_t *pte = &ptable->entries[PAGE_TABLE_INDEX((uint32_t)vaddr)];
+        ENTRY_SET_FRAME(*pdir_entry, ENTRY_GET_ATTRIBUTE(*map_ptable_entry,
+                                                         PAGE_STRUCT_PAGE_FRAME));
+    } else {
+        /* map the page table so it can be used */
+        ENTRY_SET_FRAME(*map_ptable_entry, PTE_FROM_PDIR(pdir_entry));
+        flush_tlb_entry(0xC03FF000);
+    }
 
-  /* map the page table entry */
-  ENTRY_ADD_ATTRIBUTE(*pte, PAGE_STRUCT_ENTRY_PRESENT);
-  ENTRY_ADD_ATTRIBUTE(*pte, PAGE_STRUCT_ENTRY_WRITEABLE);
-  if (ring3)
-    ENTRY_ADD_ATTRIBUTE(*pte, PAGE_STRUCT_ENTRY_USER_ACCESS);
-  ENTRY_SET_FRAME(*pte, paddr);
+    /* get the page table entry from the page table */
+    pt_entry_t *pte = &ptable->entries[PAGE_TABLE_INDEX((uint32_t)vaddr)];
 
-  flush_tlb_entry((vaddr_t)vaddr);
+    /* map the page table entry */
+    ENTRY_ADD_ATTRIBUTE(*pte, PAGE_STRUCT_ENTRY_PRESENT);
+    ENTRY_ADD_ATTRIBUTE(*pte, PAGE_STRUCT_ENTRY_WRITEABLE);
+    if (ring3)
+        ENTRY_ADD_ATTRIBUTE(*pte, PAGE_STRUCT_ENTRY_USER_ACCESS);
+    ENTRY_SET_FRAME(*pte, paddr);
 
-  return vaddr;
+    flush_tlb_entry((vaddr_t)vaddr);
+
+    return vaddr;
 }
 
 void *valloc_page(void *vaddr) {
-  void *page = alloc_page();
-  return vmm_map_page(page, vaddr ? vaddr : page, false);
+    void *page = alloc_page();
+    return vmm_map_page(page, vaddr ? vaddr : page, false);
 }
 
 void *valloc_big_page(void *vaddr) {
-  void *page = alloc_pages(0x400);
+    void *page = alloc_pages(0x400);
 
-  return vmm_map_big_page(page, vaddr ? vaddr : page);
+    return vmm_map_big_page(page, vaddr ? vaddr : page);
 }
 
 void vfree_page(void *vaddr) {
-  pd_entry_t *pdir_entry =
-      &page_directory.entries[PAGE_DIR_INDEX((size_t)vaddr)];
+    pd_entry_t *pdir_entry =
+        &page_directory.entries[PAGE_DIR_INDEX((size_t)vaddr)];
 
-  /* page table will be mapped to 0xC03FF000 */
-  ptable_t *ptable = (ptable_t *)0xC03FF000;
+    /* page table will be mapped to 0xC03FF000 */
+    ptable_t *ptable = (ptable_t *)0xC03FF000;
 
-  /* used to map the page table into memory */
-  pt_entry_t *map_ptable_entry =
-      &higher_half_page_table.entries[PAGE_TABLE_INDEX(0xC03FF000)];
+    /* used to map the page table into memory */
+    pt_entry_t *map_ptable_entry =
+        &higher_half_page_table.entries[PAGE_TABLE_INDEX(0xC03FF000)];
 
-  /* map the page table */
-  ENTRY_SET_FRAME(*map_ptable_entry, PTE_FROM_PDIR(pdir_entry));
-  flush_tlb_entry(0xC03FF000);
+    /* map the page table */
+    ENTRY_SET_FRAME(*map_ptable_entry, PTE_FROM_PDIR(pdir_entry));
+    flush_tlb_entry(0xC03FF000);
 
-  /* get the page table entry from the page table */
-  pt_entry_t *pte = &ptable->entries[PAGE_TABLE_INDEX((size_t)vaddr)];
+    /* get the page table entry from the page table */
+    pt_entry_t *pte = &ptable->entries[PAGE_TABLE_INDEX((size_t)vaddr)];
 
-  ENTRY_DEL_ATTRIBUTE(*pte, PAGE_STRUCT_ENTRY_PRESENT);
+    ENTRY_DEL_ATTRIBUTE(*pte, PAGE_STRUCT_ENTRY_PRESENT);
 }
 
 void VMM_init() {
 
-  extern uint8_t *bitmap;
-  extern size_t bitmap_len;
+    extern uint8_t *bitmap;
+    extern size_t bitmap_len;
 
-  size_t bitmap_size = bitmap_len / 8 + !!(bitmap_len % 8);
-  size_t num_pages = bitmap_size / 4096 + !!(bitmap_size % 4096);
+    size_t bitmap_size = bitmap_len / 8 + !!(bitmap_len % 8);
+    size_t num_pages = bitmap_size / 4096 + !!(bitmap_size % 4096);
 
-  if ((size_t)bitmap % 4096) {
-    printf("Bitmap not page-aligned! im too lazy to fix this 'bug'\n");
-    for (;;)
-      ;
-  }
+    if ((size_t)bitmap % 4096) {
+        printf("Bitmap not page-aligned! im too lazy to fix this 'bug'\n");
+        for (;;)
+            ;
+    }
 
-  /* map kernel heap into memory */
-  for (size_t i = 0; i < num_pages; ++i)
-    vmm_map_page(bitmap, bitmap + 0xC0000000 + i * 4096, false);
+    /* map kernel heap into memory */
+    for (size_t i = 0; i < num_pages; ++i)
+        vmm_map_page(bitmap, bitmap + 0xC0000000 + i * 4096, false);
 
-  /* map one userspace page into memory (TEMP) */
-  void *user_stack_bottom = (void *)(0xBFFFF000 - 4096);
-  vmm_map_page(alloc_page(), user_stack_bottom, true);
+    /* map one userspace page into memory (TEMP) */
+    void *user_stack_bottom = (void *)(0xBFFFF000 - 4096);
+    vmm_map_page(alloc_page(), user_stack_bottom, true);
 
-  /* map the userspace code into memory (TEMP) */
-  extern void user();
-  uint32_t user_function_page = (uint32_t)user;
-  vmm_map_page((void *)(user_function_page - 0xC0000000), (void *)user_function_page, true);
-  
+    /* map the userspace code into memory (TEMP) */
+    extern void user();
+    uint32_t user_function_page = (uint32_t)user;
+    vmm_map_page((void *)(user_function_page - 0xC0000000), (void *)user_function_page, true);
 
-  /* just invalidate the identity-mapping page directory entry */
-  page_directory.entries[PAGE_DIR_INDEX(0x0)] = 0;
 
-  bitmap += 0xC0000000;
+    /* just invalidate the identity-mapping page directory entry */
+    page_directory.entries[PAGE_DIR_INDEX(0x0)] = 0;
 
-  flush_pd();
+    bitmap += 0xC0000000;
 
-  //  valloc_page((void *)0xD0000000); /* temporary bullshit */
+    flush_pd();
+
+    //  valloc_page((void *)0xD0000000); /* temporary bullshit */
 }
 
 void ISR_page_flt_handler(registers_t *regs) {
-  uint64_t fault_addr;
+    uint64_t fault_addr;
 
 #ifndef __APPLE__
-  asm volatile("movl %%cr2, %0" : "=r"(fault_addr)::);
+    asm volatile("movl %%cr2, %0" : "=r"(fault_addr)::);
 #endif
 
-  /* page is in kernel heap */
-  if (0xD0000000 <= fault_addr && fault_addr < 0xE0000000)
-    valloc_page((void *)fault_addr);
-  else {
-    printf("FATAL ERROR: PAGE FAULT AT ADDRESS %p\n"
-           "SYSTEM HALTING, MANUAL SHIT OFF REQUIRED\n",
-           (void *)fault_addr);
-    for (;;)
-      ;
-  }
+    /* page is in kernel heap */
+    if (0xD0000000 <= fault_addr && fault_addr < 0xE0000000)
+        valloc_page((void *)fault_addr);
+    else {
+        printf("FATAL ERROR: PAGE FAULT AT ADDRESS %p\n"
+               "SYSTEM HALTING, MANUAL SHIT OFF REQUIRED\n",
+               (void *)fault_addr);
+        for (;;)
+            ;
+    }
 }

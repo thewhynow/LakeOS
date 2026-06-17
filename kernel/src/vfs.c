@@ -27,7 +27,7 @@ void VFS_register_fs(t_VFSOperations *driver){
 t_FSContext *VFS_try_mount(storage_device_t *dev, t_VFSOperations **out){
     t_FSContext *ctx;
     for (size_t i = 0; i < num_drivers; ++i){
-        ctx = vfsops[i].f_Mount(dev); 
+        ctx = vfsops[i].f_Mount(dev);
         *out = vfsops;
         if (ctx) return ctx;
     }
@@ -43,13 +43,13 @@ void VFS_mount_root(t_FSContext *fs, t_VFSOperations *fsops){
 }
 
 void VFS_init_virt(){
-	t_FSNode virt_root = VFM_root();
-	t_VFSNode *virt_root_vnode = VFS_make_vnode(&vfs_root, virt_root);
-	virt_root_vnode->driver = &vfm_vfs_ops;
-	VFS_insert_vnode(&vfs_root, virt_root_vnode); 
+    t_FSNode virt_root = VFM_root();
+    t_VFSNode *virt_root_vnode = VFS_make_vnode(&vfs_root, virt_root);
+    virt_root_vnode->driver = &vfm_vfs_ops;
+    VFS_insert_vnode(&vfs_root, virt_root_vnode);
 
-  VFS_create("/VIRT/STDIN", 0);
-  VFS_create("/VIRT/STDOUT", 0);
+    VFS_create("/VIRT/STDIN", 0);
+    VFS_create("/VIRT/STDOUT", 0);
 }
 
 void VFS_init_rootfs(){
@@ -57,7 +57,7 @@ void VFS_init_rootfs(){
     vfs_root.driver->f_Create(vfs_root.handle, "BIN",  FILE_ATTRIB_DIRECTORY);
     vfs_root.driver->f_Create(vfs_root.handle, "SYS",  FILE_ATTRIB_DIRECTORY);
 
-    VFS_init_virt();	
+    VFS_init_virt();
 }
 
 
@@ -70,11 +70,11 @@ void VFS_init(){
         t_FSContext *ctx = VFS_try_mount(dev + i, &rootfsops);
         if (ctx){
             VFS_mount_root(ctx, rootfsops);
-            break; 
+            break;
         }
     }
 
-	  VFS_init_rootfs();
+    // VFS_init_rootfs();
 }
 
 void VFS_curr_chrono(t_FileChrono *out){
@@ -85,19 +85,19 @@ void VFS_curr_chrono(t_FileChrono *out){
         .day_of_month = time.monthday,
         .month_of_year = time.month,
         .year = time.year
-   };
+    };
 }
 
 void VFS_insert_vnode(t_VFSNode *parent, t_VFSNode *child){
     t_VFSNode *iter = parent->children;
 
     if (!iter){
-		parent->children = child;
-		return;
-	}
+        parent->children = child;
+        return;
+    }
 
     while (iter->next)
-		iter = iter->next;
+        iter = iter->next;
 
     iter->next = child;
 }
@@ -122,37 +122,37 @@ t_VFSNode *VFS_walk_path(const char *_path){
         if (!iter) return iter;
     }
 
-	kfree(path);
+    kfree(path);
 
     return iter;
 }
 
 t_VFSNode *VFS_get_dir_and_fname(const char *_path, char **out_fname){
-	char *path = strdup(_path);
+    char *path = strdup(_path);
 
-	int i = strlen(path) - 1;
+    int i = strlen(path) - 1;
 
-	for (; i >= 0; --i)
-		if (path[i] == '/'){
-			path[i] = '\0';
-			break;
-		}
+    for (; i >= 0; --i)
+        if (path[i] == '/'){
+            path[i] = '\0';
+            break;
+        }
 
-	//while (path[i] != '/')
-	//	--i;
-	//path[i] = '\0';
+    //while (path[i] != '/')
+    //	--i;
+    //path[i] = '\0';
 
-	*out_fname = (char*)_path + i + 1; 
+    *out_fname = (char*)_path + i + 1;
 
-	t_VFSNode *dir = VFS_walk_path(path);
+    t_VFSNode *dir = VFS_walk_path(path);
 
-	kfree(path);
+    kfree(path);
 
-	return dir;
+    return dir;
 }
 
 size_t VFS_make_file
-	(t_VFSNode *parent, const char *name, uint8_t attribs)
+    (t_VFSNode *parent, const char *name, uint8_t attribs)
 {
     parent->driver->f_Create(parent->handle, name, attribs);
     return 0;
@@ -163,7 +163,7 @@ t_VFSNode *VFS_lookup(t_VFSNode *parent, const char *name){
         const char *nodename = node->driver->f_NodeName(node->handle);
         if (!strcmp(nodename, name)) return node;
     }
-    
+
     t_FSNode *node = parent->driver->f_Lookup(parent->handle, name);
     if (node){
         t_VFSNode *vnode = VFS_make_vnode(parent, node);
@@ -178,60 +178,67 @@ t_VFSNode *VFS_lookup(t_VFSNode *parent, const char *name){
  */
 
 void *VFS_open(const char *path, uint8_t mode){
-	t_VFSNode *vnode = VFS_walk_path(path);
+    t_VFSNode *vnode = VFS_walk_path(path);
 
-	t_FSFile file = vnode->driver->f_Open(vnode->handle, mode);
+    t_FSFile file = vnode->driver->f_Open(vnode->handle, mode);
 
-	t_FileDescriptor *res = kmalloc(sizeof(t_FileDescriptor));
+    t_FileDescriptor *res = kmalloc(sizeof(t_FileDescriptor));
 
-	*res = (t_FileDescriptor){
-		.descriptor = file,
-		.driver     = vnode->driver
-	};
+    *res = (t_FileDescriptor){
+        .descriptor = file,
+        .driver     = vnode->driver
+    };
 
-	return res;
+    return res;
 }
 
 void VFS_close(void *_descriptor){
-	t_FileDescriptor *descriptor = _descriptor;	
+    t_FileDescriptor *descriptor = _descriptor;
 
-	descriptor->driver->f_Close(descriptor->descriptor);	
+    descriptor->driver->f_Close(descriptor->descriptor);
 
-	kfree(descriptor);
+    kfree(descriptor);
 }
 
 size_t VFS_write(void *_descriptor, void *data, size_t len){
-	t_FileDescriptor *descriptor = _descriptor;
+    t_FileDescriptor *descriptor = _descriptor;
 
-	return
-		descriptor->driver->f_Write(descriptor->descriptor, len, data);
+    return
+        descriptor->driver->f_Write(descriptor->descriptor, len, data);
 }
 
 size_t VFS_read(void *_descriptor, void *data, size_t len){
-	t_FileDescriptor *descriptor = _descriptor;
+    t_FileDescriptor *descriptor = _descriptor;
 
-	return
-		descriptor->driver->f_Read(descriptor->descriptor, len, data);
+    return
+        descriptor->driver->f_Read(descriptor->descriptor, len, data);
 }
 
 void VFS_create(const char *path, uint8_t attributes){
-	char *file_name;
-	t_VFSNode *dir_vnode = VFS_get_dir_and_fname(path, &file_name);	
+    char *file_name;
+    t_VFSNode *dir_vnode = VFS_get_dir_and_fname(path, &file_name);
 
-	VFS_make_file(dir_vnode, file_name, attributes);
+    VFS_make_file(dir_vnode, file_name, attributes);
 }
 
 void VFS_remove(const char *path){
-	t_VFSNode *vnode = VFS_walk_path(path);
+    t_VFSNode *vnode = VFS_walk_path(path);
 
-	vnode->driver->f_Remove(vnode->handle);
+    vnode->driver->f_Remove(vnode->handle);
 
-	t_VFSNode *iter = vnode->parent->children;
+    t_VFSNode *iter = vnode->parent->children;
 
-	while (iter->next != vnode)
-		iter = iter->next;
+    while (iter->next != vnode)
+        iter = iter->next;
 
-	iter->next = iter->next->next;
+    iter->next = iter->next->next;
 
-	kfree(vnode->handle);
+    kfree(vnode->handle);
+}
+
+size_t VFS_size(void *_descriptor){
+    t_FileDescriptor *descriptor = _descriptor;
+    t_FileStat stat;
+    descriptor->driver->f_Stat(descriptor->descriptor, &stat);
+    return stat.size;
 }

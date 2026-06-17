@@ -61,7 +61,7 @@ void terminal_putchar(char c){
     else {
         terminal_col = 0;
         if (++terminal_row == TERMINAL_HEIGHT)
-           terminal_scroll();
+            terminal_scroll();
     }
 
     terminal_update_cursor();

@@ -179,6 +179,8 @@ size_t VFS_read(void *descriptor, void *data, size_t len);
 void VFS_create(const char *path, uint8_t attributes);
 void VFS_remove(const char *path);
 
+size_t VFS_size(void *descriptor);
+
 /**
  * modes used for opening files
  */
@@ -223,8 +225,8 @@ typedef struct t_VFSNode {
  * 	to interact with a file
  */
 typedef struct t_FileDescriptor {
-	t_FSFile descriptor;
-	t_VFSOperations *driver
+    t_FSFile descriptor;
+    t_VFSOperations *driver
 } t_FileDescriptor;
 
 /**
@@ -232,7 +234,7 @@ typedef struct t_FileDescriptor {
  * 	uses the filesystem of the parent file
  */
 size_t VFS_make_file
-	(t_VFSNode *parent, const char *name, uint8_t attribs);
+    (t_VFSNode *parent, const char *name, uint8_t attribs);
 
 /**
  * returns a vnode to a file with given name that

@@ -420,15 +420,15 @@ t_FATContext *FAT_mount(storage_device_t *dev){
  */
 uint32_t FAT_absolute_offset(t_FATContext *ctx, uint32_t cluster, size_t offset, uint32_t *clus_fail){
     if (cluster < 2){
-		size_t root_dir_size = 
-			ctx->boot_sector.bytes_per_sector * sizeof(t_ShortDirEntry);
-		
-		if (offset > root_dir_size)
-			return 0;
+        size_t root_dir_size =
+            ctx->boot_sector.bytes_per_sector * sizeof(t_ShortDirEntry);
+
+        if (offset > root_dir_size)
+            return 0;
 
         return RootDirSector(ctx) * ctx->boot_sector.bytes_per_sector + offset;
 
-	}
+    }
 
     if (offset < ctx->bytes_p_clus)
         return FAT_clus_to_off(ctx, cluster) + offset;
@@ -483,13 +483,13 @@ size_t FAT_clus_to_off(t_FATContext *ctx, uint32_t cluster){
 }
 
 bool FAT_is_root(t_FATContext *ctx, uint32_t cluster){
-	if (ctx->type != FAT_32)
-		return cluster < 2;
-     
-     size_t root_off = RootDirSector(ctx) * ctx->boot_sector.bytes_per_sector;
-     size_t clus_off = FAT_clus_to_off(ctx, cluster);
+    if (ctx->type != FAT_32)
+        return cluster < 2;
 
-     return  !!FAT_absolute_offset(ctx, 0, clus_off - root_off, NULL);
+    size_t root_off = RootDirSector(ctx) * ctx->boot_sector.bytes_per_sector;
+    size_t clus_off = FAT_clus_to_off(ctx, cluster);
+
+    return  !!FAT_absolute_offset(ctx, 0, clus_off - root_off, NULL);
 }
 
 /**
@@ -891,7 +891,7 @@ t_FATFile *FAT_open(t_FATHandle *handle, uint8_t mode){
 void FAT_close(t_FATFile *file){
     FAT_upd_entry(file->ctx, file);
 
-	kfree(file);
+    kfree(file);
 }
 
 size_t FAT_write(t_FATFile *file, size_t len, void *data){

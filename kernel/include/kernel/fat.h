@@ -625,9 +625,9 @@ typedef enum {
     FAT_FILE_EOF   = 0b00001000
 } e_FATFileFlagMasks;
 
- /**
-  * upper two bits of attrib byte are reserved and should be set to 0
-  */
+/**
+ * upper two bits of attrib byte are reserved and should be set to 0
+ */
 typedef enum {
     /* writes to the file should fail */
     ENTRY_ATTR_READ_ONLY = 0x01,

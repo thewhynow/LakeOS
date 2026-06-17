@@ -82,12 +82,12 @@ void DMA_set_mask(uint8_t channel, bool mask){
             port_write_byte(DMA0_CHANMASK_REG, 0b100 | channel);
         else
             port_write_byte(DMA1_CHANMASK_REG, 0b100 | (channel - 4));
-        }
+    }
     else {
-            if (channel <= 4)
-                port_write_byte(DMA0_CHANMASK_REG, channel);
-            else
-                port_write_byte(DMA1_CHANMASK_REG, channel - 4);        
+        if (channel <= 4)
+            port_write_byte(DMA0_CHANMASK_REG, channel);
+        else
+            port_write_byte(DMA1_CHANMASK_REG, channel - 4);
     }
 }
 

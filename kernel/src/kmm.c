@@ -12,9 +12,9 @@ void KMM_init(){
 }
 
 void *kmalloc(size_t bytes){
-	void *res = find_first_fit(bytes);
+    void *res = find_first_fit(bytes);
 
-	return res;
+    return res;
 }
 void *krealloc(void *p, size_t new_sz){
     if (!p) return kmalloc(new_sz);
@@ -103,7 +103,7 @@ void *find_first_fit(size_t bytes){
         if (iter->size >= bytes){
             ret = (size_t*)iter;
             iter->prev->next = iter->next;
-			iter->next->prev = iter->prev;
+            iter->next->prev = iter->prev;
             *ret = bytes;
             return ret + 1;
         }
@@ -119,10 +119,10 @@ void coalesce_neighbors(t_FreeBlock *block){
                 *next = block->next;
     
     /* nothing to coalesce if only one block exists */
-	if (block->next == block || block->prev == block)
+    if (block->next == block || block->prev == block)
         return;
 
-	if ((uint8_t*)block + block->size == (uint8_t*)next){
+    if ((uint8_t*)block + block->size == (uint8_t*)next){
         /* merge 'next' */
         next->next->prev = block;     
         block->next = next->next;
@@ -130,7 +130,7 @@ void coalesce_neighbors(t_FreeBlock *block){
         block->size += next->size;
     } 
 
-	else if ((uint8_t*)prev + prev->size == (uint8_t*)block){
+    else if ((uint8_t*)prev + prev->size == (uint8_t*)block){
         /* merge 'block' */
         prev->next = next;
         next->prev = prev;

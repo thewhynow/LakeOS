@@ -9,10 +9,10 @@
 #include <kernel/isr.h>
 
 typedef enum {
-  SYSCALL_READ,
-  SYSCALL_WRITE,
-  SYSCALL_OPEN,
-  SYSCALL_CLOSE,
+    SYSCALL_READ,
+    SYSCALL_WRITE,
+    SYSCALL_OPEN,
+    SYSCALL_CLOSE,
 } e_SYSCALL_NUMS;
 
 void ISR_syscall_handler(registers_t *regs);

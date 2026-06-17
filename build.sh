@@ -154,7 +154,7 @@ $grub_iso_path -o lakeos.iso iso
 echo $q_flags
 qemu-system-i386 $q_flags
 
-rm lakeos.iso
+#/rm lakeos.iso
 rm iso/boot/lakeos.elf
 
 for ((i = 0; i < f_index; i++)); do

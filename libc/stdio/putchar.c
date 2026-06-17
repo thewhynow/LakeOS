@@ -5,8 +5,8 @@
 #include <kernel/tty.h>
 
 int putchar(int c){
-	terminal_putchar(c);		
-	return c;
+    terminal_putchar(c);		
+    return c;
 }
 
 #else
