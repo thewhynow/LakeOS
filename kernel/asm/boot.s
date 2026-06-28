@@ -5,8 +5,8 @@
 .section .data
 
 .align 4096
-.global page_directory
-page_directory:
+.global kernel_page_directory
+kernel_page_directory:
     .skip 4096
 
 /* identity map first 4MB */
@@ -34,7 +34,7 @@ higher_half_page_table:
 .type _start, @function
 /* set up paging */
 _start:
-    movl $page_directory, %eax
+    movl $kernel_page_directory, %eax
     subl $0xC0000000, %eax
     
     movl $identity_page_table, %ecx

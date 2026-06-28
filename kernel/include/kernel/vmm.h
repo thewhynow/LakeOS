@@ -83,6 +83,32 @@ typedef uint32_t paddr_t;
     ((entry) = ((entry) & ~(uint32_t)PAGE_STRUCT_PAGE_FRAME) |                 \
                ((uint32_t)(frame) & (uint32_t)PAGE_STRUCT_PAGE_FRAME))
 
+#define ENTRIES_PER_STRUCT 1024
+
+#define PAGE_DIR_INDEX(vaddr) (((vaddr) >> 22) & 0x3FF)
+
+#define PAGE_TABLE_INDEX(vaddr) (((vaddr) >> 12) & 0x3FF)
+
+#define PTE_FROM_PDIR(page) (*page & ~0xFFF)
+
+#define PTABLE_ADDRESS_SPACE 0x400000
+#define DTABLE_ADDRESS_SPACE 0x100000000
+
+#define PAGE_SIZE 4096
+
+typedef struct {
+    pt_entry_t entries[ENTRIES_PER_STRUCT];
+} ptable_t;
+
+typedef struct {
+    pd_entry_t entries[ENTRIES_PER_STRUCT];
+} pdirectory_t;
+
+extern pdirectory_t kernel_page_directory;
+extern ptable_t higher_half_page_table;
+
+extern pdirectory_t *curr_page_directory;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -90,18 +116,22 @@ extern "C" {
 void VMM_init();
 
 void *vmm_map_page(void *paddr, void *vaddr, bool ring3);
+void vmm_unmap_page(void *vaddr);
+
+/* assumes that the physical address is being passed */
+void switch_pd(pdirectory_t *new_pd);
 
 /**
  * allocates a page physically and maps it to the specified address
  * if vaddr == NULL, identity-maps the page
  */
 void *valloc_page(void *vaddr);
-
-void *vmm_map_big_page(void *paddr, void *vaddr);
-
 void vfree_page(void *vaddr);
 
+void *vmm_map_big_page(void *paddr, void *vaddr);
 void *valloc_big_page(void *vaddr);
+
+void *virt_to_phys(void *vaddr);
 
 #ifdef __cplusplus
 }

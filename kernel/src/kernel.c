@@ -76,5 +76,5 @@ void kernel_main() {
     printf("Warping into userspace...\n");
 
     extern void jump_ring3();
-    jump_ring3();
+//    jump_ring3();
 }

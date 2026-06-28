@@ -325,10 +325,14 @@ typedef enum {
   ELF32_P_HEADER_TYPE_HI_PROC = 0x7fffffff
 } e_elf32_p_header_type;
 
-void elf_load(const char *path);
+void *elf_load(const void *file_buff);
 char *file_load(const char *path);
 bool elf_validate_magic(elf32_header_t *header);
 bool elf_validate_supported(elf32_header_t *header);
+
+void elf_load_segments(elf32_header_t *header);
+
+
 
 elf32_s_header_t *elf_null_s_header(elf32_header_t *header);
 elf32_s_header_t *elf_s_header(elf32_header_t *header, size_t idx);
@@ -337,5 +341,11 @@ const char *elf_string_table(elf32_header_t *header);
 const char *elf_lookup_string(elf32_header_t *header, size_t offset);
 
 int elf_symbol_value(elf32_header_t *header, int table, uint32_t index);
+
+void elf_allocate_sections(elf32_header_t *header);
+
+void elf_load_relocations(elf32_header_t *header);
+
+void elf_relocate(elf32_header_t *header, elf32_relocation_t *relocation, elf32_s_header_t *table);
 #endif
 

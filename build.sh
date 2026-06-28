@@ -114,6 +114,8 @@ $compiler_path -c kernel/src/vfs.c -o vfs.o $c_flags
 $compiler_path -c kernel/src/vfm.c -o vfm.o $c_flags
 $compiler_path -c kernel/src/tss.c -o tss.o $c_flags
 $compiler_path -c kernel/src/sys.c -o sys.o $c_flags
+$compiler_path -c kernel/src/elf.c -o elf.o $c_flags
+$compiler_path -c kernel/src/exe.c -o exe.o $c_flags
 
 $compiler_path -c libc/stdio/printf.c -o printf.o $c_flags
 $compiler_path -c libc/stdio/putchar.c -o putchar.o $c_flags

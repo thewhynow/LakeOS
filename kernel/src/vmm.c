@@ -3,29 +3,7 @@
 #include <kernel/vmm.h>
 #include <string.h>
 
-#define ENTRIES_PER_STRUCT 1024
-
-#define PAGE_DIR_INDEX(vaddr) (((vaddr) >> 22) & 0x3FF)
-
-#define PAGE_TABLE_INDEX(vaddr) (((vaddr) >> 12) & 0x3FF)
-
-#define PTE_FROM_PDIR(page) (*page & ~0xFFF)
-
-#define PTABLE_ADDRESS_SPACE 0x400000
-#define DTABLE_ADDRESS_SPACE 0x100000000
-
-#define PAGE_SIZE 4096
-
-typedef struct {
-    pt_entry_t entries[ENTRIES_PER_STRUCT];
-} ptable_t;
-
-typedef struct {
-    pd_entry_t entries[ENTRIES_PER_STRUCT];
-} pdirectory_t;
-
-extern pdirectory_t page_directory;
-extern ptable_t higher_half_page_table;
+pdirectory_t *curr_page_directory;
 
 static void flush_pd() {
 /* to shut apple intellisense up */
@@ -45,8 +23,37 @@ static void flush_tlb_entry(vaddr_t vaddr) {
 #endif
 }
 
+void *virt_to_phys(void *vaddr) {
+    pd_entry_t *pdir_entry =
+        &curr_page_directory->entries[PAGE_DIR_INDEX((uint32_t)vaddr)];
+
+    /* temporarily map the page table containing vaddr to 0xC03FF000 */
+    ptable_t *ptable = (ptable_t *)0xC03FF000;
+    pt_entry_t *map_ptable_entry =
+        &higher_half_page_table.entries[PAGE_TABLE_INDEX(0xC03FF000)];
+
+    ENTRY_SET_FRAME(*map_ptable_entry, PTE_FROM_PDIR(pdir_entry));
+    flush_tlb_entry(0xC03FF000);
+
+    pt_entry_t *pte = &ptable->entries[PAGE_TABLE_INDEX((uint32_t)vaddr)];
+
+    if (!ENTRY_GET_ATTRIBUTE(*pte, PAGE_STRUCT_ENTRY_PRESENT))
+        return 0;
+
+    /* all usecases of this function only deal with page-aligned addresses  */
+    return (void*) ENTRY_GET_ATTRIBUTE(*pte, PAGE_STRUCT_PAGE_FRAME);
+}
+
+void switch_pd(pdirectory_t *new_pd) {
+    curr_page_directory = new_pd;
+
+#ifndef __APPLE__
+    asm volatile("movl %0, %%cr3" ::"r"(new_pd) : "memory");
+#endif
+}
+
 void *vmm_map_big_page(void *paddr, void *vaddr) {
-    pd_entry_t *pde = &page_directory.entries[PAGE_DIR_INDEX((size_t)vaddr)];
+    pd_entry_t *pde = &curr_page_directory->entries[PAGE_DIR_INDEX((size_t)vaddr)];
 
     ENTRY_ADD_ATTRIBUTE(*pde, PAGE_STRUCT_ENTRY_PRESENT);
     ENTRY_ADD_ATTRIBUTE(*pde, PAGE_STRUCT_ENTRY_WRITEABLE);
@@ -59,7 +66,7 @@ void *vmm_map_big_page(void *paddr, void *vaddr) {
 
 void *vmm_map_page(void *paddr, void *vaddr, bool ring3) {
     pd_entry_t *pdir_entry =
-        &page_directory.entries[PAGE_DIR_INDEX((uint32_t)vaddr)];
+        &curr_page_directory->entries[PAGE_DIR_INDEX((uint32_t)vaddr)];
 
     /* page table will be mapped to 0xC03FF000 */
     ptable_t *ptable = (ptable_t *)0xC03FF000;
@@ -106,20 +113,9 @@ void *vmm_map_page(void *paddr, void *vaddr, bool ring3) {
     return vaddr;
 }
 
-void *valloc_page(void *vaddr) {
-    void *page = alloc_page();
-    return vmm_map_page(page, vaddr ? vaddr : page, false);
-}
-
-void *valloc_big_page(void *vaddr) {
-    void *page = alloc_pages(0x400);
-
-    return vmm_map_big_page(page, vaddr ? vaddr : page);
-}
-
-void vfree_page(void *vaddr) {
+void vmm_unmap_page(void *vaddr) {
     pd_entry_t *pdir_entry =
-        &page_directory.entries[PAGE_DIR_INDEX((size_t)vaddr)];
+        &curr_page_directory->entries[PAGE_DIR_INDEX((size_t)vaddr)];
 
     /* page table will be mapped to 0xC03FF000 */
     ptable_t *ptable = (ptable_t *)0xC03FF000;
@@ -138,6 +134,24 @@ void vfree_page(void *vaddr) {
     ENTRY_DEL_ATTRIBUTE(*pte, PAGE_STRUCT_ENTRY_PRESENT);
 }
 
+void *valloc_page(void *vaddr) {
+    void *page = alloc_page();
+    return vmm_map_page(page, vaddr ? vaddr : page, false);
+}
+
+void vfree_page(void *vaddr){
+    free_page(virt_to_phys(vaddr));
+    vmm_unmap_page(vaddr);
+}
+
+void *valloc_big_page(void *vaddr) {
+    void *page = alloc_pages(0x400);
+
+    return vmm_map_big_page(page, vaddr ? vaddr : page);
+}
+
+
+
 void VMM_init() {
 
     extern uint8_t *bitmap;
@@ -152,6 +166,8 @@ void VMM_init() {
             ;
     }
 
+    curr_page_directory = &kernel_page_directory;
+
     /* map kernel heap into memory */
     for (size_t i = 0; i < num_pages; ++i)
         vmm_map_page(bitmap, bitmap + 0xC0000000 + i * 4096, false);
@@ -160,20 +176,12 @@ void VMM_init() {
     void *user_stack_bottom = (void *)(0xBFFFF000 - 4096);
     vmm_map_page(alloc_page(), user_stack_bottom, true);
 
-    /* map the userspace code into memory (TEMP) */
-    extern void user();
-    uint32_t user_function_page = (uint32_t)user;
-    vmm_map_page((void *)(user_function_page - 0xC0000000), (void *)user_function_page, true);
-
-
     /* just invalidate the identity-mapping page directory entry */
-    page_directory.entries[PAGE_DIR_INDEX(0x0)] = 0;
+    curr_page_directory->entries[PAGE_DIR_INDEX(0x0)] = 0;
 
     bitmap += 0xC0000000;
 
     flush_pd();
-
-    //  valloc_page((void *)0xD0000000); /* temporary bullshit */
 }
 
 void ISR_page_flt_handler(registers_t *regs) {
