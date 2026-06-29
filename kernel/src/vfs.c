@@ -236,9 +236,7 @@ void VFS_remove(const char *path){
     kfree(vnode->handle);
 }
 
-size_t VFS_size(void *_descriptor){
-    t_FileDescriptor *descriptor = _descriptor;
-    t_FileStat stat;
-    descriptor->driver->f_Stat(descriptor->descriptor, &stat);
-    return stat.size;
+void VFS_stat(const char *path, const t_FileStat *stat){
+    t_VFSNode *vnode = VFS_walk_path(path);
+    vnode->driver->f_Stat(vnode->handle, stat);
 }

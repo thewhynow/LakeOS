@@ -179,7 +179,7 @@ size_t VFS_read(void *descriptor, void *data, size_t len);
 void VFS_create(const char *path, uint8_t attributes);
 void VFS_remove(const char *path);
 
-size_t VFS_size(void *descriptor);
+void VFS_stat(const char *path, const t_FileStat *stat);
 
 /**
  * modes used for opening files

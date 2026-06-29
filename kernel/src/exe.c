@@ -10,6 +10,8 @@ pdirectory_t *new_page_directory(){
         new_pd->entries[i] = kernel_page_directory.entries[i];
 
     vmm_unmap_page(new_pd);
+
+    return new_pd;
 }
 
 void *new_stack(int argc, const char **argv){
@@ -22,7 +24,7 @@ void *new_stack(int argc, const char **argv){
         stack_begin -= 0x1000;
     }
 
-    return stack_begin;
+    return (void*) 0xC0000000;
 }
 
 t_Process *new_process(){
@@ -62,10 +64,14 @@ int execute(const void *file_buff, int argc, const char **argv){
     /* kernel/asm/user.s */
     extern void jump_ring3(registers_t *regs); 
     jump_ring3(&process_stack->context);
+}
 
+int execute_execution(int code){
     vfree_page(process_stack->address_space);
 
     t_Process *prev = process_stack->prev;
     kfree(process_stack);
     process_stack = prev;
+    
+    /* TODO */
 }

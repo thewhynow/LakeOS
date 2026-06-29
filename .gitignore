@@ -4,4 +4,3 @@ fat.img
 kernel/*/*.swp
 libc/inc/*.swp
 libc/*/*.swp
-page_directory_switching_notes.txt
