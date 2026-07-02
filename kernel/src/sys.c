@@ -27,7 +27,7 @@ void ISR_syscall_handler(registers_t *regs){
         }
 
         case SYSCALL_EXEC: {
-            regs->eax = sys_exec((void*) regs->edi, (void*) regs->esi, (void*) regs->edx);
+            regs->eax = sys_exec((void*) regs->edi, regs->esi, (void*) regs->edx);
             break;
         }
 
@@ -44,14 +44,11 @@ void ISR_syscall_handler(registers_t *regs){
 }
 
 size_t sys_read(int fd, void *buff, size_t count){
-    return VFS_read((void*) fd, buff, count);
+    return VFS_read(fd, buff, count);
 }
 
 size_t sys_write(int fd, const void *buff, size_t count){
-    if (fd == 1)
-        terminal_write(buff, count);
-    else
-        return VFS_write((void*) fd, buff, count);
+    return VFS_write(fd, buff, count);
 }
 
 int sys_open(const char *filename, uint8_t mode){
@@ -59,7 +56,7 @@ int sys_open(const char *filename, uint8_t mode){
 }
 
 int sys_close(int fd){
-    VFS_close((void*) fd);
+    VFS_close(fd);
     return 1;
 }
 
@@ -68,15 +65,16 @@ int sys_stat(const char *filename, const t_FileStat *statbuff){
     return 1;
 }
 
-int sys_exec(const char *path, char *const *argv, char *const *envp){
+int sys_exec(const char *path, int argc, char **argv){
     stat_t file_stat;
     stat(path, &file_stat);
 
     void *buff = kmalloc(file_stat.size);
     int fd = open(path, VFS_FILE_READ);
     read(fd, buff, file_stat.size);
+    close(fd);
 
-    execute(buff, 0, NULL); 
+    execute(buff, argc, argv); 
 }
 
 void sys_exit(int status){

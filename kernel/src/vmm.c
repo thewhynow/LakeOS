@@ -45,8 +45,6 @@ void *virt_to_phys(void *vaddr) {
 }
 
 void switch_pd(pdirectory_t *new_pd) {
-    curr_page_directory = new_pd;
-
 #ifndef __APPLE__
     asm volatile("movl %0, %%cr3" ::"r"(new_pd) : "memory");
 #endif

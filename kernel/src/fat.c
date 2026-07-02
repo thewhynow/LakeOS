@@ -703,7 +703,7 @@ void FAT_file_entry(t_FATHandle *file, t_ShortDirEntry *out_entry){
 
     for (uint32_t i = 0; !eoc; ++i){
         if (!memcmp(out_entry, conv_fname, 11)) return;
-        FAT_dir_entry(file->ctx, file->dir_cluster, i + 1, out_entry);
+        eoc = FAT_dir_entry(file->ctx, file->dir_cluster, i + 1, out_entry);
     }
 
     memset(out_entry, 0, sizeof *out_entry);

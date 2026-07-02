@@ -25,7 +25,7 @@ size_t sys_write(int fd, const void *buff, size_t count);
 int    sys_open(const char *filename, uint8_t mode);
 int    sys_close(int fd);
 int    sys_stat(const char *filename, const t_FileStat *statbuff);
-int    sys_exec(const char *path, char *const *argv, char *const *envp);
+int    sys_exec(const char *path, int argc, char **argv); 
 void   sys_exit(int status);
 
 #endif

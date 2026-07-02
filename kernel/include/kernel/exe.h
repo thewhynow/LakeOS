@@ -16,7 +16,7 @@ struct t_Process {
     t_Process *prev;
 };
 
-int execute(const void *file_buff, int argc, const char **argv);
+int execute(const void *file_buff, int argc, char **argv);
 
 pdirectory_t *new_page_directory();
 
@@ -24,4 +24,7 @@ typedef void (*f_entry)(void);
 
 t_Process *new_process();
 
+void *new_stack(int argc, const char **argv);
+
+void *add_entrance_args(void *stack_base, int argc, const char **argv);
 #endif

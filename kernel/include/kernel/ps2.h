@@ -21,6 +21,10 @@ char* PS2_read();
 
 /* flushes the internal stdin buffer */
 void PS2_flush();
+
+/* reads input in a non psychotic manner */
+size_t PS2_read_bytes(void *buff, size_t bytes);
+    
 #ifdef __cplusplus
 }
 #endif

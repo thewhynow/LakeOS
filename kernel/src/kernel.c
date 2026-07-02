@@ -13,8 +13,10 @@
 #include <kernel/tss.h>
 #include <kernel/tty.h>
 #include <kernel/vfm.h>
+#include <kernel/dev.h>
 #include <kernel/vfs.h>
 #include <kernel/vmm.h>
+#include <kernel/sys.h>
 #include <stdio.h>
 
 void kernel_main() {
@@ -64,6 +66,9 @@ void kernel_main() {
     printf("Loading VFM...");
     VFM_init();
     printf("VFM Loaded!\n");
+    printf("Loading DEV...");
+    DEV_init();
+    printf("DEV Loaded!\n");
     printf("Loading VFS...");
     VFS_init();
     printf("VFS Loaded!\n");
@@ -73,8 +78,5 @@ void kernel_main() {
 
     printf("Welcome to lakeOS!\n");
 
-    printf("Warping into userspace...\n");
-
-    extern void jump_ring3();
-//    jump_ring3();
+    sys_exec("/INIT.ELF", 0, NULL);
 }

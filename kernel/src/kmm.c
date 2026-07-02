@@ -25,12 +25,21 @@ void *krealloc(void *p, size_t new_sz){
     do {
         if (iter == p - sizeof(size_t) + alloc_sz && iter->size >= new_sz - alloc_sz){
             size_t offset = new_sz - alloc_sz;
-            t_FreeBlock *moved = (void*)iter + offset;
-            memcpy(moved, iter, sizeof *iter);
-            moved->size -= offset;
-            moved->prev->next = moved;
-            moved->next->prev = moved;
-            *((size_t*)p - 1) = new_sz;
+            size_t remainder = iter->size - offset;
+
+            if (remainder >= sizeof(t_FreeBlock)){
+                t_FreeBlock *moved = (void*)iter + offset;
+                memmove(moved, iter, sizeof *iter);
+                moved->size = remainder;
+                moved->prev->next = moved;
+                moved->next->prev = moved;
+                *((size_t*)p - 1) = new_sz;
+            }
+            else {
+                iter->prev->next = iter->next;
+                iter->next->prev = iter->prev;
+                *((size_t*)p - 1) = alloc_sz + iter->size;
+            }
             return p;
         }
         iter = iter->next;

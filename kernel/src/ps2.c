@@ -103,7 +103,9 @@ char* PS2_read(){
     PIC_unmask(KEYBOARD_IRQ);
 
     while (keycode != PS2_ENTER){
+#ifndef __APPLE__
         asm volatile ("hlt");
+#endif
         if (0 < keycode && keycode <= 0x58){
             if (keycode == PS2_BACKSPACE){
                 if (ps2_stdin[0]){
@@ -128,6 +130,18 @@ char* PS2_read(){
     PIC_mask(KEYBOARD_IRQ);
     
     return ps2_stdin;    
+}
+
+size_t PS2_read_bytes(void *buff, size_t bytes){
+    void *ps2_buff = PS2_read();
+    terminal_putchar('\n');
+
+    size_t size = strlen(ps2_buff);
+
+    if (size > bytes)
+        memcpy(buff, ps2_buff, bytes);
+    else
+        memcpy(buff, ps2_buff, size);
 }
 
 void PS2_flush(){

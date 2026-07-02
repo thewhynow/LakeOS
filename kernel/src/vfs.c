@@ -1,6 +1,7 @@
 #include <kernel/kmm.h>
 #include <kernel/rtc.h>
 #include <kernel/vfm.h>
+#include <kernel/dev.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -18,7 +19,6 @@ static size_t num_drivers;
 static t_MountPoint *mounts;
 static size_t num_mounts;
 static t_VFSNode vfs_root;
-
 void VFS_register_fs(t_VFSOperations *driver){
     vfsops = kexpand(vfsops, sizeof *driver);
     vfsops[num_drivers++] = *driver;
@@ -47,19 +47,45 @@ void VFS_init_virt(){
     t_VFSNode *virt_root_vnode = VFS_make_vnode(&vfs_root, virt_root);
     virt_root_vnode->driver = &vfm_vfs_ops;
     VFS_insert_vnode(&vfs_root, virt_root_vnode);
+}
 
-    VFS_create("/VIRT/STDIN", 0);
-    VFS_create("/VIRT/STDOUT", 0);
+void VFS_init_dev(){
+    t_FSNode dev_root = DEV_root();
+    t_VFSNode *dev_root_vnode = VFS_make_vnode(&vfs_root, dev_root);
+    dev_root_vnode->driver = &dev_vfs_ops;
+    VFS_insert_vnode(&vfs_root, dev_root_vnode);
+
+    t_VFSNode *vfs_stdin = VFS_lookup(dev_root_vnode, "STDIN"),
+             *vfs_stdout = VFS_lookup(dev_root_vnode, "STDOUT")
+    ;
+    
+    t_FileDescriptor *fd0 = kmalloc(sizeof *fd0),
+                     *fd1 = kmalloc(sizeof *fd1)
+    ;
+
+    *fd0 = (t_FileDescriptor){
+        .descriptor = vfs_stdin->handle,
+        .driver     = vfs_stdin->driver
+    };
+
+    *fd1 = (t_FileDescriptor){
+        .descriptor = vfs_stdout->handle,
+        .driver     = vfs_stdout->driver
+    };
+
+    VFS_add_descriptor(fd0);
+    VFS_add_descriptor(fd1);
 }
 
 void VFS_init_rootfs(){
-    vfs_root.driver->f_Create(vfs_root.handle, "USER", FILE_ATTRIB_DIRECTORY);
-    vfs_root.driver->f_Create(vfs_root.handle, "BIN",  FILE_ATTRIB_DIRECTORY);
-    vfs_root.driver->f_Create(vfs_root.handle, "SYS",  FILE_ATTRIB_DIRECTORY);
+    if (!VFS_lookup(&vfs_root, "USER"))
+        vfs_root.driver->f_Create(vfs_root.handle, "USER", FILE_ATTRIB_DIRECTORY);
+    if (!VFS_lookup(&vfs_root, "BIN"))
+        vfs_root.driver->f_Create(vfs_root.handle, "BIN",  FILE_ATTRIB_DIRECTORY);
 
     VFS_init_virt();
+    VFS_init_dev();
 }
-
 
 void VFS_init(){
     uint32_t num;
@@ -74,7 +100,7 @@ void VFS_init(){
         }
     }
 
-    // VFS_init_rootfs();
+    VFS_init_rootfs();
 }
 
 void VFS_curr_chrono(t_FileChrono *out){
@@ -138,10 +164,6 @@ t_VFSNode *VFS_get_dir_and_fname(const char *_path, char **out_fname){
             break;
         }
 
-    //while (path[i] != '/')
-    //	--i;
-    //path[i] = '\0';
-
     *out_fname = (char*)_path + i + 1;
 
     t_VFSNode *dir = VFS_walk_path(path);
@@ -173,11 +195,35 @@ t_VFSNode *VFS_lookup(t_VFSNode *parent, const char *name){
 
     return NULL;
 }
+
+static t_FSFile *descriptor_list;
+static size_t descriptor_list_size;
+
+int VFS_add_descriptor(t_FSFile file){
+    for (size_t i = 0; i < descriptor_list_size; ++i){
+        if (descriptor_list[i] == NULL){
+            descriptor_list[i] = file;
+            return i;
+        }
+    }
+
+    /* if the list needs to be expanded */
+
+    descriptor_list = kexpand(descriptor_list, sizeof file);
+    descriptor_list[descriptor_list_size] = file;
+    return descriptor_list_size++;
+}
+
+void VFS_rem_descriptor(int fd){
+    /* lazily deallocate */
+    descriptor_list[fd] = NULL;
+}
+
 /**
  * final vfs goddamn api
  */
 
-void *VFS_open(const char *path, uint8_t mode){
+int VFS_open(const char *path, uint8_t mode){
     t_VFSNode *vnode = VFS_walk_path(path);
 
     t_FSFile file = vnode->driver->f_Open(vnode->handle, mode);
@@ -189,26 +235,24 @@ void *VFS_open(const char *path, uint8_t mode){
         .driver     = vnode->driver
     };
 
-    return res;
+    return VFS_add_descriptor(res);
 }
 
-void VFS_close(void *_descriptor){
-    t_FileDescriptor *descriptor = _descriptor;
-
+void VFS_close(int fd){
+    t_FileDescriptor *descriptor = descriptor_list[fd];
     descriptor->driver->f_Close(descriptor->descriptor);
-
     kfree(descriptor);
 }
 
-size_t VFS_write(void *_descriptor, void *data, size_t len){
-    t_FileDescriptor *descriptor = _descriptor;
+size_t VFS_write(int fd, void *data, size_t len){
+    t_FileDescriptor *descriptor = descriptor_list[fd];
 
     return
         descriptor->driver->f_Write(descriptor->descriptor, len, data);
 }
 
-size_t VFS_read(void *_descriptor, void *data, size_t len){
-    t_FileDescriptor *descriptor = _descriptor;
+size_t VFS_read(int fd, void *data, size_t len){
+    t_FileDescriptor *descriptor = descriptor_list[fd];
 
     return
         descriptor->driver->f_Read(descriptor->descriptor, len, data);

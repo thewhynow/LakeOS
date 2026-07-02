@@ -14,17 +14,38 @@ pdirectory_t *new_page_directory(){
     return new_pd;
 }
 
-void *new_stack(int argc, const char **argv){
-    /* ignoring argv and argc for now cause i have to somehow map argv in */
+void *add_entrance_args(void *stack_base, int argc, const char **argv){
+    char **temp_argv = kmalloc(sizeof(char*) * (argc + 1));
+    temp_argv[argc] = NULL;
 
-    void *stack_begin = (void*) (0xC0000000 - 0x1000);
-
-    for (int i = 0; i < 64; ++i){
-        valloc_page(stack_begin);
-        stack_begin -= 0x1000;
+    for (int i = 0; i < argc; ++i){
+        int len = strlen(argv[i]);
+        stack_base -= len + 1;
+        temp_argv[i] = strcpy(stack_base, argv[i]);
     }
 
-    return (void*) 0xC0000000;
+    stack_base 
+        = memcpy((char**) stack_base - argc - 1, temp_argv, sizeof(char*) * (argc + 1)); 
+
+    stack_base -= sizeof(int);
+    *(int*) stack_base = argc;
+
+    kfree(temp_argv);
+    return stack_base;
+}
+
+void *new_stack(int argc, const char **argv){
+    void *page = (void*) 0xC0000000;
+
+    for (int i = 0; i < 64; ++i){
+        page -= 0x1000;
+        valloc_page(page);
+    }
+
+    void *stack_base 
+        = add_entrance_args((void*) 0xC0000000, argc, argv);
+
+    return stack_base;
 }
 
 t_Process *new_process(){
@@ -38,9 +59,8 @@ t_Process *new_process(){
         new_proc->prev = NULL;
 
     process_stack = new_proc;
-
     switch_pd(process_stack->address_space);
-    vmm_map_page(process_stack->address_space, &kernel_page_directory, false);
+    vmm_map_page(process_stack->address_space, curr_page_directory, false);
 
     /* TEMP */
     new_proc->context = (registers_t){0};
@@ -54,7 +74,7 @@ t_Process *new_process(){
     };
 }
 
-int execute(const void *file_buff, int argc, const char **argv){
+int execute(const void *file_buff, int argc, char **argv){
     new_process();
 
     f_entry entry = elf_load(file_buff);

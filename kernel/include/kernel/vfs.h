@@ -166,15 +166,19 @@ void VFS_register_fs(t_VFSOperations *ops);
 
 void VFS_curr_chrono(t_FileChrono *out);
 
+int VFS_add_descriptor(t_FSFile file);
+
+void VFS_rem_descriptor(int fd);
+
 /**
  * VFS PUBLIC API START
  */
 
-void *VFS_open(const char *path, uint8_t mode);
-void VFS_close(void *descriptor);
+int VFS_open(const char *path, uint8_t mode);
+void VFS_close(int descriptor);
 
-size_t VFS_write(void *descriptor, void *data, size_t len);
-size_t VFS_read(void *descriptor, void *data, size_t len);
+size_t VFS_write(int descriptor, void *data, size_t len);
+size_t VFS_read(int descriptor, void *data, size_t len);
 
 void VFS_create(const char *path, uint8_t attributes);
 void VFS_remove(const char *path);

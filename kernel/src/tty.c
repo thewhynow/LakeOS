@@ -67,9 +67,11 @@ void terminal_putchar(char c){
     terminal_update_cursor();
 }
 
-void terminal_write(const char* str, size_t len){
+size_t terminal_write(const char* str, size_t len){
     for (size_t i = 0; i < len; ++i)
         terminal_putchar(str[i]);
+
+    return len;
 }
 
 void terminal_print(const char* str){

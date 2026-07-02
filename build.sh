@@ -90,6 +90,7 @@ for arg in $@; do
   esac
 done
 
+
 $compiler_path -c kernel/src/kernel.c -o kernel.o $c_flags
 $compiler_path -c kernel/src/tty.c -o tty.o $c_flags
 $compiler_path -c kernel/src/gdt.c -o gdt.o $c_flags
@@ -116,6 +117,9 @@ $compiler_path -c kernel/src/tss.c -o tss.o $c_flags
 $compiler_path -c kernel/src/sys.c -o sys.o $c_flags
 $compiler_path -c kernel/src/elf.c -o elf.o $c_flags
 $compiler_path -c kernel/src/exe.c -o exe.o $c_flags
+$compiler_path -c kernel/src/dev.c -o dev.o $c_flags
+
+$compiler_path -c libc/sys/sys.c -o _sys.o $c_flags
 
 $compiler_path -c libc/stdio/printf.c -o printf.o $c_flags
 $compiler_path -c libc/stdio/putchar.c -o putchar.o $c_flags
@@ -151,6 +155,8 @@ $assemble_path kernel/asm/user.s -o user.o $s_flags
 $compiler_path -T kernel/linker.ld -o iso/boot/lakeos.elf $c_flags -lgcc *.o
 
 rm *.o
+
+mcopy -i fat.img user/INIT.ELF ::
 
 $grub_iso_path -o lakeos.iso iso
 echo $q_flags

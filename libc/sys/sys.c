@@ -41,9 +41,9 @@ int stat(const char *filename, const stat_t *statbuff){
 #endif
 }
 
-int exec(const char *path, char *const *argv, char *const *envp){
+int exec(const char *path, int argc, char **argv){
 #ifdef __is_libk
-    sys_exec(path, argv, envp);
+    sys_exec(path, argc, argv);
 #else
 
 #endif

@@ -4,10 +4,10 @@ jump_ring3:
   movl 4(%esp), %esp
 
   popl %eax
-  movw %cx, %ds
-  movw %cx, %es
-  movw %cx, %fs
-  movw %cx, %gs
+  movw %ax, %ds
+  movw %ax, %es
+  movw %ax, %fs
+  movw %ax, %gs
 
   /* set up stack frame iret expects */
   popa
