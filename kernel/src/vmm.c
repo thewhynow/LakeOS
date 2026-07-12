@@ -148,10 +148,7 @@ void *valloc_big_page(void *vaddr) {
     return vmm_map_big_page(page, vaddr ? vaddr : page);
 }
 
-
-
 void VMM_init() {
-
     extern uint8_t *bitmap;
     extern size_t bitmap_len;
 
@@ -169,10 +166,6 @@ void VMM_init() {
     /* map kernel heap into memory */
     for (size_t i = 0; i < num_pages; ++i)
         vmm_map_page(bitmap, bitmap + 0xC0000000 + i * 4096, false);
-
-    /* map one userspace page into memory (TEMP) */
-    void *user_stack_bottom = (void *)(0xBFFFF000 - 4096);
-    vmm_map_page(alloc_page(), user_stack_bottom, true);
 
     /* just invalidate the identity-mapping page directory entry */
     curr_page_directory->entries[PAGE_DIR_INDEX(0x0)] = 0;

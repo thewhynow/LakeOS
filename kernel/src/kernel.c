@@ -69,7 +69,7 @@ void kernel_main() {
     printf("Loading DEV...");
     DEV_init();
     printf("DEV Loaded!\n");
-    printf("Loading VFS...");
+    printf("Loading VFS...\n");
     VFS_init();
     printf("VFS Loaded!\n");
 
@@ -77,6 +77,7 @@ void kernel_main() {
     printf("The time is %d:%d:%d\n", time.hours, time.minutes, time.seconds);
 
     printf("Welcome to lakeOS!\n");
-
     sys_exec("/INIT.ELF", 0, NULL);
+
+    printf("hello");
 }

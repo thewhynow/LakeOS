@@ -78,10 +78,23 @@ void VFS_init_dev(){
 }
 
 void VFS_init_rootfs(){
-    if (!VFS_lookup(&vfs_root, "USER"))
+    if (!VFS_lookup(&vfs_root, "LAKEOS")){
+        printf(
+            "This disk does not have LakeOS installed.\n"
+            "Do you want to install? y/n\n"
+        );
+        char ans = getchar();
+
+        if (ans == 'y')
+            printf("Installing...\n");
+        else
+            printf("Fuck you. Installing...\n");
+
+        /* marker file for LakeOS */
+        vfs_root.driver->f_Create(vfs_root.handle, "LAKEOS", FILE_ATTRIB_SYSTEM);
         vfs_root.driver->f_Create(vfs_root.handle, "USER", FILE_ATTRIB_DIRECTORY);
-    if (!VFS_lookup(&vfs_root, "BIN"))
         vfs_root.driver->f_Create(vfs_root.handle, "BIN",  FILE_ATTRIB_DIRECTORY);
+    }
 
     VFS_init_virt();
     VFS_init_dev();
@@ -91,13 +104,32 @@ void VFS_init(){
     uint32_t num;
     storage_device_t *dev = SAL_get_devices(&num);
 
+retry_mounting:
     for (uint32_t i = 0; i < num; ++i){
         t_VFSOperations *rootfsops;
         t_FSContext *ctx = VFS_try_mount(dev + i, &rootfsops);
+
         if (ctx){
-            VFS_mount_root(ctx, rootfsops);
-            break;
+        reread_input:
+            printf("Mount root on on %s? y/n\n", dev[i].name);
+            char ans = getchar();
+
+            if (ans == 'y'){
+                VFS_mount_root(ctx, rootfsops); 
+                break;
+            }
+            else if (ans == 'n')
+                continue;
+            else {
+                printf("Please enter either 'y' or 'n'\n");
+                goto reread_input;
+            }
         }
+    }
+
+    if (!vfs_root.driver){
+        printf("No boot device selected. Retry...\n");
+        goto retry_mounting;
     }
 
     VFS_init_rootfs();
@@ -135,7 +167,10 @@ t_VFSNode *VFS_make_vnode(t_VFSNode *parent, t_FSNode *handle){
         .children = NULL,
         .next = NULL,
         .handle = handle,
-        .driver = parent->driver }; return node;
+        .driver = parent->driver
+    };
+
+    return node;
 }
 
 t_VFSNode *VFS_walk_path(const char *_path){

@@ -1,7 +1,6 @@
 #!/bin/bash
 
-##########################################################################
-#   BUILDS AND RUNS THE OPERATING SYSTEM USING QEMU                      #
+########################################################################## BUILDS AND RUNS THE OPERATING SYSTEM USING QEMU                      #
 #                                                                        #
 #   FLAGS:                                                               #
 #       hd (up to 3)                                                     #
@@ -26,15 +25,15 @@
 ##########################################################################
 
 if [[ $(uname) == "Darwin" ]]; then
-  compiler_path="i686-elf-gcc"
-  cxx_cmpl_path="i686-elf-g++"
-  assemble_path="i686-elf-as"
-  grub_iso_path="i686-elf-grub-mkrescue"
+    compiler_path="i686-elf-gcc"
+    cxx_cmpl_path="i686-elf-g++"
+    assemble_path="i686-elf-as"
+    grub_iso_path="i686-elf-grub-mkrescue"
 else
-  compiler_path="/home/thewhynow/opt/cross/bin/i686-elf-gcc"
-  cxx_cmpl_path="/home/thewhynow/opt/cross/bin/i686-elf-g++"
-  assemble_path="/home/thewhynow/opt/cross/bin/i686-elf-as"
-  grub_iso_path="grub-mkrescue"
+    compiler_path="/home/thewhynow/opt/cross/bin/i686-elf-gcc"
+    cxx_cmpl_path="/home/thewhynow/opt/cross/bin/i686-elf-g++"
+    assemble_path="/home/thewhynow/opt/cross/bin/i686-elf-as"
+    grub_iso_path="grub-mkrescue"
 fi
 
 # i understand that only building with debug flags is shit but the alternative
@@ -54,42 +53,45 @@ f_index=0
 h_index=1
 
 for arg in $@; do
-  case $arg in
-  "debug")
-    c_flags+=" -g"
-    s_flags+=" -g"
-    x_flags+=" -g"
-    q_flags+=" -s -S"
-    ;;
-  "log")
+    case $arg in
+    "debug")
+        c_flags+=" -g"
+        s_flags+=" -g"
+        x_flags+=" -g"
+        q_flags+=" -s -S"
+        ;;
+    "log")
 
-    q_flags+=" -d int -D qemu.log"
-    ;;
-  "fd")
-    dd if=/dev/zero of=floppy${f_index}.img bs=512 count=2880
-    q_flags+=" -drive file=floppy${f_index}.img,format=raw,index=${f_index},if=floppy"
-    ((f_index++))
-    ;;
-  "hd")
-    dd if=/dev/zero of=harddisk${h_index}.img bs=1M count=1
-    q_flags+=" -drive file=harddisk${h_index}.img,format=raw,index=${h_index},if=ide"
-    ((h_index++))
-    ;;
-  "debug-fat-hd")
-    dd if=/dev/zero of=fat.img bs=1M count=1
-    mformat -i fat.img ::
-    q_flags+=" -drive file=fat.img,format=raw,index=${h_index},if=ide"
-    ((h_index++))
-    ;;
-  "debug-fat-fd")
-    dd if=/dev/zero of=fat.img bs=512 count=2880
-    mformat -i fat.img ::
-    q_flags+=" -drive file=fat.img,format=raw,index=${f_index},if=floppy"
-    ((f_index++))
-    ;;
-  esac
+        q_flags+=" -d int -D qemu.log"
+        ;;
+    "fd")
+        dd if=/dev/zero of=floppy${f_index}.img bs=512 count=2880
+        q_flags+=" -drive file=floppy${f_index}.img,format=raw,index=${f_index},if=floppy"
+        ((f_index++))
+        ;;
+    "hd")
+        dd if=/dev/zero of=harddisk${h_index}.img bs=1M count=1
+        q_flags+=" -drive file=harddisk${h_index}.img,format=raw,index=${h_index},if=ide"
+        ((h_index++))
+        ;;
+    "debug-fat-hd")
+        dd if=/dev/zero of=fat.img bs=1M count=1
+        mformat -i fat.img ::
+        q_flags+=" -drive file=fat.img,format=raw,index=${h_index},if=ide"
+        ((h_index++))
+        ;;
+    "debug-fat-fd")
+        dd if=/dev/zero of=fat.img bs=512 count=2880
+        mformat -i fat.img ::
+        q_flags+=" -drive file=fat.img,format=raw,index=${f_index},if=floppy"
+        ((f_index++))
+        ;;
+    "regular")
+        q_flags+=" -drive file=system.img,format=raw,index=${h_index},if=ide"
+        ((h_index++))
+        ;;
+    esac
 done
-
 
 $compiler_path -c kernel/src/kernel.c -o kernel.o $c_flags
 $compiler_path -c kernel/src/tty.c -o tty.o $c_flags
@@ -156,21 +158,19 @@ $compiler_path -T kernel/linker.ld -o iso/boot/lakeos.elf $c_flags -lgcc *.o
 
 rm *.o
 
-mcopy -i fat.img user/INIT.ELF ::
+#mcopy -i fat.img user/INIT.ELF ::
 
 $grub_iso_path -o lakeos.iso iso
 echo $q_flags
 qemu-system-i386 $q_flags
 
-#/rm lakeos.iso
+rm lakeos.iso
 rm iso/boot/lakeos.elf
 
 for ((i = 0; i < f_index; i++)); do
-  rm floppy${i}.img
+    rm floppy${i}.img
 done
 
 for ((i = 1; i < h_index; i++)); do
-  rm harddisk${i}.img
+    rm harddisk${i}.img
 done
-
-rm iso/boot/lakeos.elf

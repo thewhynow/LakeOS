@@ -1,4 +1,5 @@
 #include <kernel/exe.h>
+#include <kernel/tss.h>
 
 static t_Process *process_stack;
 
@@ -25,7 +26,10 @@ void *add_entrance_args(void *stack_base, int argc, const char **argv){
     }
 
     stack_base 
-        = memcpy((char**) stack_base - argc - 1, temp_argv, sizeof(char*) * (argc + 1)); 
+        = memcpy(
+            (char**) stack_base - argc - 1, 
+            temp_argv, sizeof(char*) * (argc + 1)
+        ); 
 
     stack_base -= sizeof(int);
     *(int*) stack_base = argc;
@@ -48,7 +52,7 @@ void *new_stack(int argc, const char **argv){
     return stack_base;
 }
 
-t_Process *new_process(){
+t_Process *new_process(int argc, char **argv){
     t_Process *new_proc = kmalloc(sizeof(t_Process));
 
     new_proc->address_space = new_page_directory();
@@ -60,38 +64,53 @@ t_Process *new_process(){
 
     process_stack = new_proc;
     switch_pd(process_stack->address_space);
-    vmm_map_page(process_stack->address_space, curr_page_directory, false);
+    vmm_map_page(
+        process_stack->address_space, 
+        curr_page_directory, false
+    );
 
-    /* TEMP */
     new_proc->context = (registers_t){0};
 
     new_proc->context = (registers_t){
         .ds     = (4 * 8) | 3,
         .cs     = (3 * 8) | 3,
         .eflags = 0x202,
-        .esp    = (uint32_t) new_stack(0, NULL),
+        /* ignore cast to void*, i'm too lazy to fix my const-correctness >:D */
+        .esp    = (uint32_t) new_stack(argc, (void*) argv),
         .ss     = (4 * 8) | 3
     };
 }
 
 int execute(const void *file_buff, int argc, char **argv){
-    new_process();
+    new_process(argc, argv);
 
     f_entry entry = elf_load(file_buff);
 
     process_stack->context.eip = (uint32_t) entry;
 
+    /* kernel stack size (2 pages) */
+    process_stack->kernel_stack = kmalloc(0x2000);
+    /* to demand-map */
+    memset(process_stack->kernel_stack, 0, 0x2000);
+
+    g_tss.esp0 = (uint32_t) process_stack->kernel_stack;
+
+    kfree(file_buff);
+
     /* kernel/asm/user.s */
     extern void jump_ring3(registers_t *regs); 
     jump_ring3(&process_stack->context);
+
+    __builtin_unreachable();
 }
 
-int execute_execution(int code){
+int exit_process(int code){
     vfree_page(process_stack->address_space);
+    kfree(process_stack->kernel_stack);
 
     t_Process *prev = process_stack->prev;
     kfree(process_stack);
     process_stack = prev;
-    
+
     /* TODO */
 }
