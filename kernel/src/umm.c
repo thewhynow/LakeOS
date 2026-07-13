@@ -94,3 +94,59 @@ end:
     umap_pages(process, first_fit_start, len, prot, flags);
     return first_fit_start;
 }
+
+void umm_page_flt_handler(void *fault_addr){
+    /* exe.c */
+    extern t_Process *process_stack;
+
+    if (fault_addr < process_stack->blocks->start){
+        if (
+            process_stack->blocks->start - user_memory_start >= 0x1000 * 2 &&
+            process_stack->blocks->flags & UMM_BLOCK_FLAG_GROWSDOWN
+        ){
+            process_stack->blocks->start -= 0x1000;
+            process_stack->blocks->len   += 0x1000;
+            vmm_map_page(
+                alloc_page(),
+                process_stack->blocks->start,
+                !!(process_stack->blocks->prot & UMM_BLOCK_PROT_WRITE),
+                true
+            );
+            return;
+        }
+        else
+            goto fail;
+    }
+
+    for (
+        umm_block_t *iter = process_stack->blocks;
+        iter->next;
+        iter = iter->next
+    ){
+        if (
+            iter->start + iter->len <= fault_addr &&
+            fault_addr < iter->next->start
+        ){
+                
+            if (
+                iter->next->start - (iter->start + iter->len) >= 0x1000 * 2 &&
+                iter->next->flags & UMM_BLOCK_FLAG_GROWSDOWN
+            ){
+                iter->next->start -= 0x1000;
+                iter->next->len   += 0x1000;
+                vmm_map_page(
+                    alloc_page(), iter->next->start, 
+                    !!(iter->next->prot & UMM_BLOCK_PROT_WRITE), 
+                    true
+                );
+                return;
+            }
+            else
+                goto fail;
+        }
+    }
+
+fail:
+    printf("\nFUCKASS USER PAGEFAULT\n");
+    for (;;);
+}

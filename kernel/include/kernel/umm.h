@@ -32,6 +32,7 @@ void umap_pages(t_Process *process, void *vaddr, size_t len, int prot, int flags
  */
 void umm_unmap_pages(t_Process *process, void *vaddr);
 
+void umm_page_flt_handler(void *fault_addr);
 
 struct umm_block_t {
     void *start;
