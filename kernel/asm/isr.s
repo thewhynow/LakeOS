@@ -32,6 +32,8 @@ isr_common:
     call ISR_handler
     addl $4, %esp
 
+.global isr_return
+isr_return:
     popl %eax /* restore old segment */
     movw %ax, %ds
     movw %ax, %es

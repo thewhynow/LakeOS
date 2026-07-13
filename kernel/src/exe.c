@@ -79,6 +79,8 @@ t_Process *new_process(int argc, char **argv){
         .esp    = (uint32_t) new_stack(argc, (void*) argv),
         .ss     = (4 * 8) | 3
     };
+
+    return new_proc;
 }
 
 int execute(const void *file_buff, int argc, char **argv){
@@ -93,24 +95,54 @@ int execute(const void *file_buff, int argc, char **argv){
     /* to demand-map */
     memset(process_stack->kernel_stack, 0, 0x2000);
 
-    g_tss.esp0 = (uint32_t) process_stack->kernel_stack;
+    registers_t *context = 
+        process_stack->kernel_stack + 0x2000 - sizeof(registers_t);
+    *context = process_stack->context;
+
+    g_tss.esp0 = (uint32_t) process_stack->kernel_stack + 0x2000;
 
     kfree(file_buff);
 
     /* kernel/asm/user.s */
-    extern void jump_ring3(registers_t *regs); 
-    jump_ring3(&process_stack->context);
+    extern void enter_context(registers_t *regs); 
+    enter_context(&process_stack->context);
 
     __builtin_unreachable();
 }
 
 int exit_process(int code){
-    vfree_page(process_stack->address_space);
-    kfree(process_stack->kernel_stack);
+    t_Process *dying = process_stack;
+    t_Process *revive = process_stack->prev;
 
-    t_Process *prev = process_stack->prev;
-    kfree(process_stack);
-    process_stack = prev;
+    if (!revive){
+        /* TODO */
+        printf("Fuck...\n");
+        for (;;) ;
+    }
 
-    /* TODO */
+    /* technically use-after-free, but nobody else is calling kmalloc() so its fine... */
+    kfree(dying->kernel_stack);
+
+    for (void *p = 0; p < 768 * 1024; ++p){
+        void *page = (void*) ((uint32_t) p * 0x1000);
+        vfree_page(page);
+    }
+
+    switch_pd(revive->address_space);
+    free_page(dying->address_space);
+
+    process_stack = revive;
+    kfree(dying);
+
+    registers_t *revive_regs = 
+        process_stack->kernel_stack + 0x2000 - sizeof(registers_t);
+
+    revive_regs->eax = code;
+
+    g_tss.esp0 = (uint32_t) revive->kernel_stack + 0x2000;
+
+    extern void enter_context(registers_t *context);
+    enter_context(revive_regs);
+
+    __builtin_unreachable();
 }

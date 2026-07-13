@@ -34,7 +34,8 @@ void ISR_syscall_handler(registers_t *regs){
         case SYSCALL_EXIT: {
             regs->eax = regs->edi;
             sys_exit(regs->edi);
-            break;
+
+            __builtin_unreachable();
         }
 
         default: {

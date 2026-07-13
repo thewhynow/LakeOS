@@ -27,6 +27,9 @@ void *virt_to_phys(void *vaddr) {
     pd_entry_t *pdir_entry =
         &curr_page_directory->entries[PAGE_DIR_INDEX((uint32_t)vaddr)];
 
+    if (!ENTRY_GET_ATTRIBUTE(*pdir_entry, PAGE_STRUCT_ENTRY_PRESENT))
+        return 0;
+
     /* temporarily map the page table containing vaddr to 0xC03FF000 */
     ptable_t *ptable = (ptable_t *)0xC03FF000;
     pt_entry_t *map_ptable_entry =
@@ -130,6 +133,16 @@ void vmm_unmap_page(void *vaddr) {
     pt_entry_t *pte = &ptable->entries[PAGE_TABLE_INDEX((size_t)vaddr)];
 
     ENTRY_DEL_ATTRIBUTE(*pte, PAGE_STRUCT_ENTRY_PRESENT);
+
+    /* check if the entire page table is empty and free if so */
+    for (int i = 0; i < 1024; ++i){
+        pt_entry_t *pte = &ptable->entries[i];
+        if (ENTRY_GET_ATTRIBUTE(*pte, PAGE_STRUCT_ENTRY_PRESENT))
+            return;
+    }
+
+    free_page((void*) PTE_FROM_PDIR(pdir_entry));
+    ENTRY_DEL_ATTRIBUTE(*pdir_entry, PAGE_STRUCT_ENTRY_PRESENT);
 }
 
 void *valloc_page(void *vaddr) {
@@ -138,10 +151,13 @@ void *valloc_page(void *vaddr) {
 }
 
 void vfree_page(void *vaddr){
-    free_page(virt_to_phys(vaddr));
-    vmm_unmap_page(vaddr);
-}
+    void *paddr = virt_to_phys(vaddr);
 
+    if (paddr){
+        free_page(paddr);
+        vmm_unmap_page(vaddr);
+    }
+}
 void *valloc_big_page(void *vaddr) {
     void *page = alloc_pages(0x400);
 

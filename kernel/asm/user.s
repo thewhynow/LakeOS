@@ -1,16 +1,10 @@
 .section .text
-.global jump_ring3
-jump_ring3:
-  movl 4(%esp), %esp
 
-  popl %eax
-  movw %ax, %ds
-  movw %ax, %es
-  movw %ax, %fs
-  movw %ax, %gs
+.extern isr_return
 
-  /* set up stack frame iret expects */
-  popa
-  addl $8, %esp
-  iret
+/* void enter_context(registers_t registers) */
+.global enter_context
+enter_context:
+    movl 4(%esp), %esp /* esp = &registers */ 
+    jmp isr_return
 
