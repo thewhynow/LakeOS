@@ -23,7 +23,8 @@ size_t read(int fd, void *buff, size_t count);
 size_t write(int fd, const void *buff, size_t count);
 int    open(const char *filename, uint8_t mode);
 int    close(int fd);
-int    stat(const char *filename, const stat_t *statbuff);
+int    stat(const char *filename, stat_t *statbuff);
+int    fstat(int fd, stat_t *statbuff);
 int    exec(const char *path, int argc, char **argv);
 void   exit(int status);
 

@@ -1016,7 +1016,12 @@ void FAT_file_stat(t_FATHandle *file, t_FileStat *out){
     if (entry.attributes & ENTRY_ATTR_SYSTEM)    out->flags |= FILE_ATTRIB_SYSTEM;
 }
 
+size_t FAT_file_seek(t_FATFile *file, size_t position){
+    if (position != -1)
+        file->position = position;
 
+    return file->position;
+}
 
 void FAT_init(){
     t_VFSOperations driver = (t_VFSOperations){
@@ -1032,7 +1037,8 @@ void FAT_init(){
         .f_Write    = (void*)FAT_write,
         .f_ReadDir  = (void*)FAT_read_dir,
         .f_NodeName = (void*)FAT_handle_name,
-        .f_Stat     = (void*)FAT_file_stat
+        .f_Stat     = (void*)FAT_file_stat,
+        .f_Seek     = (void*)FAT_file_seek,
     };
     VFS_register_fs(&driver);
 

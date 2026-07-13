@@ -20,7 +20,8 @@ t_VFSOperations vfm_vfs_ops = (t_VFSOperations){
     .f_Write    = (void*) VFM_write,
     .f_ReadDir  = (void*) VFM_ReadDir,
     .f_NodeName = (void*) VFM_nodename,
-    .f_Stat     = (void*) VFM_fstat
+    .f_Stat     = (void*) VFM_fstat,
+    .f_Seek     = (void*) VFM_seek,
 };
 
 /**
@@ -193,4 +194,8 @@ void VFM_fstat(t_VFMHandle *file, t_FileStat *out){
         .size = ksize(file->content),
         .flags = file->fileflags
     };
+}
+
+void VFM_seek(t_VFMFile *file, size_t position){
+    file->pos = position;
 }

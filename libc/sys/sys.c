@@ -33,9 +33,17 @@ int close(int fd){
 #endif
 }
 
-int stat(const char *filename, const stat_t *statbuff){
+int stat(const char *filename, stat_t *statbuff){
 #ifdef __is_libk
     sys_stat(filename, (void*) statbuff);
+#else
+
+#endif
+}
+
+int fstat(int fd, stat_t *statbuff){
+#ifdef __is_libk
+    sys_fstat(fd, (void*) statbuff);
 #else
 
 #endif

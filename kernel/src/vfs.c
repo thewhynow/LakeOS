@@ -319,3 +319,65 @@ void VFS_stat(const char *path, const t_FileStat *stat){
     t_VFSNode *vnode = VFS_walk_path(path);
     vnode->driver->f_Stat(vnode->handle, stat);
 }
+
+void VFS_fstat(int fd, const t_FileStat *stat){
+    t_FileDescriptor *descriptor = descriptor_list[fd];
+
+    return
+        descriptor->driver->f_Stat(descriptor->descriptor, stat);
+}
+
+size_t VFS_seek(int fd, size_t offset, int whence){
+    t_FileDescriptor *descriptor = descriptor_list[fd];
+
+    t_FileStat stat;
+    VFS_fstat(fd, &stat);
+
+    size_t new_pos;
+
+    switch(whence){
+        case VFS_SEEK_SET:
+            new_pos = offset;
+            break;
+        case VFS_SEEK_CUR:
+            new_pos = 
+                descriptor->driver->f_Seek(
+                    descriptor->descriptor, -1
+                ) + offset;
+            break;
+        case VFS_SEEK_END:
+            new_pos = stat.size + offset;
+            break;
+    } 
+
+    /* expand the file with null bytes if necessary */
+    if (new_pos > stat.size){
+        static uint8_t zero_buff[0xFF];
+
+        while (new_pos - stat.size >= 0xFF){
+            VFS_write(fd, &zero_buff, 0xFF);
+            stat.size += 0xFF;
+        }
+
+        while (new_pos - stat.size >= 0xF){
+            VFS_write(fd, &zero_buff, 0xF);
+            stat.size += 0xF;
+        }
+
+        VFS_write(fd, &zero_buff, new_pos - stat.size);
+    }
+
+    descriptor->driver->f_Seek(
+        descriptor->descriptor, new_pos
+    );
+
+    /* return new_pos on success, offset - 1 on failure */
+    if (
+        descriptor->driver->f_Seek(
+            descriptor->driver, -1
+        ) == new_pos
+    )
+        return new_pos;
+    else
+        return offset - 1;
+}

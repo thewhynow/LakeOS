@@ -16,7 +16,8 @@ t_VFSOperations dev_vfs_ops = (t_VFSOperations){
     .f_Write    = (void*) DEV_write,
     .f_ReadDir  = (void*) DEV_readdir,
     .f_NodeName = (void*) DEV_nodename,
-    .f_Stat     = (void*) DEV_fstat
+    .f_Stat     = (void*) DEV_fstat,
+    .f_Seek     = (void*) NULL,
 };
 
 static t_DeviceFile *device_files;

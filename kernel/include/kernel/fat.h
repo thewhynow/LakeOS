@@ -687,6 +687,8 @@ const char *FAT_handle_name(t_FATHandle *handle);
 
 void FAT_file_stat(t_FATHandle *file, t_FileStat *out);
 
+size_t FAT_file_seek(t_FATFile *file, size_t position);
+
 void FAT_init();
 
 #endif

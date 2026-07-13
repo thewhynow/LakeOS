@@ -145,6 +145,17 @@ typedef struct {
     void        (*f_Stat)(t_FSNode, t_FileStat *);
 
     /**
+     * sets the file position to the value provided
+     *  assumes that the poisition is within the bounds
+     *   of the file
+     *  if the position is set to (-1) then the function
+     *   returns the current position of the file, else
+     *   the function returns the position of the file
+     *   after the seek
+     */
+    size_t      (*f_Seek)(t_FSFile, size_t);
+
+    /**
      * the fs driver is not responsible for
      *  managing memory of the handles returned,
      *  that is the responsibility of the VFS.
@@ -184,6 +195,9 @@ void VFS_create(const char *path, uint8_t attributes);
 void VFS_remove(const char *path);
 
 void VFS_stat(const char *path, const t_FileStat *stat);
+void VFS_fstat(int descriptor, const t_FileStat *stat);
+
+size_t VFS_seek(int descriptor, size_t offset, int whence);
 
 /**
  * modes used for opening files
@@ -195,6 +209,12 @@ typedef enum {
     VFS_FILE_APPND = 0b00000100,
     VFS_FILE_EOF   = 0b00001000
 } e_VFSFILEMODES;
+
+typedef enum {
+    VFS_SEEK_SET = 0,
+    VFS_SEEK_CUR = 1,
+    VFS_SEEK_END = 2,
+} e_VFSSEEKMODES;
 
 /**
  * VFS PUBLIC API END

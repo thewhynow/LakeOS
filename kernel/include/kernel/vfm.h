@@ -123,4 +123,10 @@ const char *VFM_nodename(t_VFMHandle *file);
  */
 void VFM_fstat(t_VFMHandle *file, t_FileStat *out);
 
+/**
+ * sets the position of the file
+ *  assumes it is within the bounds of the file
+ */
+void VFM_seek(t_VFMFile *file, size_t position);
+
 #endif
