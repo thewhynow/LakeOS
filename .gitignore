@@ -4,3 +4,6 @@ fat.img
 kernel/*/*.swp
 libc/inc/*.swp
 libc/*/*.swp
+build/
+lakeos.iso
+
