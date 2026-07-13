@@ -79,5 +79,5 @@ int sys_exec(const char *path, int argc, char **argv){
 }
 
 void sys_exit(int status){
-
+    exit_process(status);  
 }

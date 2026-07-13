@@ -110,7 +110,7 @@ int execute(const void *file_buff, int argc, char **argv){
     __builtin_unreachable();
 }
 
-int exit_process(int code){
+void exit_process(int code){
     t_Process *dying = process_stack;
     t_Process *revive = process_stack->prev;
 

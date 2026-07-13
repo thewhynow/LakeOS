@@ -91,7 +91,7 @@ void VFS_init_rootfs(){
             printf("Fuck you. Installing...\n");
 
         /* marker file for LakeOS */
-        vfs_root.driver->f_Create(vfs_root.handle, "LAKEOS", FILE_ATTRIB_SYSTEM);
+        vfs_root.driver->f_Create(vfs_root.handle, "LAKEOS", FILE_ATTRIB_READ_ONLY);
         vfs_root.driver->f_Create(vfs_root.handle, "USER", FILE_ATTRIB_DIRECTORY);
         vfs_root.driver->f_Create(vfs_root.handle, "BIN",  FILE_ATTRIB_DIRECTORY);
     }

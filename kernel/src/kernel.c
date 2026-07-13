@@ -78,6 +78,4 @@ void kernel_main() {
 
     printf("Welcome to lakeOS!\n");
     sys_exec("/INIT.ELF", 0, NULL);
-
-    printf("hello");
 }

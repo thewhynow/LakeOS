@@ -6,4 +6,7 @@ libc/inc/*.swp
 libc/*/*.swp
 build/
 lakeos.iso
+iso/boot/lakeos.elf
+system.img
+fat.img
 

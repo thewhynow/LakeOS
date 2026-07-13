@@ -509,7 +509,10 @@ uint32_t FAT_find_file(t_FATContext *ctx, uint32_t cluster, const char *_name){
     char name[11];
     FAT_conv_fname(_name, name);
 
-    while (!eoc && memcmp(entry.name, name, 11)){
+    while (
+        !eoc && memcmp(entry.name, name, 11) && 
+        (entry.attributes & ENTRY_ATTR_VOLUME_ID)
+    ){
         ++entry_num;
         eoc = FAT_dir_entry(ctx, cluster, entry_num, &entry);	
     }
@@ -702,7 +705,12 @@ void FAT_file_entry(t_FATHandle *file, t_ShortDirEntry *out_entry){
     bool eoc = FAT_dir_entry(file->ctx, file->dir_cluster, 0, out_entry);
 
     for (uint32_t i = 0; !eoc; ++i){
-        if (!memcmp(out_entry, conv_fname, 11)) return;
+        if (
+            !memcmp(out_entry, conv_fname, 11) &&
+            !(out_entry->attributes & ENTRY_ATTR_VOLUME_ID)
+        ) 
+            return;
+
         eoc = FAT_dir_entry(file->ctx, file->dir_cluster, i + 1, out_entry);
     }
 

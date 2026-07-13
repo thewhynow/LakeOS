@@ -18,6 +18,8 @@ struct t_Process {
 
 int execute(const void *file_buff, int argc, char **argv);
 
+void exit_process(int code);
+
 pdirectory_t *new_page_directory();
 
 typedef void (*f_entry)(void);

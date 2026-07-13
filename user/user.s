@@ -7,7 +7,9 @@ _start:
     movl $msg_len, %edx
     int $0x80
 
-1: jmp 1b
+    movl $60, %eax
+    movl $29, %edi
+    int $0x80
 
 .section .rodata
 msg:
