@@ -3,6 +3,7 @@
 #include <kernel/vmm.h>
 #include <kernel/kmm.h>
 #include <kernel/isr.h>
+#include <kernel/umm.h>
 
 #ifndef __EXE_H
 #define __EXE_H
@@ -13,6 +14,7 @@ struct t_Process {
     registers_t  context;
     void *kernel_stack;
     pdirectory_t *address_space;
+    umm_block_t *blocks;
     t_Process *prev;
 };
 

@@ -79,16 +79,52 @@ int sys_fstat(int fd, t_FileStat *statbuff){
     return 0;
 }
 
-int sys_lseek(int fd, size_t offset, int whence){
+size_t sys_lseek(int fd, ssize_t offset, int whence){
     return VFS_seek(fd, offset, whence);
 }
 
 void *sys_mmap(void *addr, size_t length, int prot, int flags, int fd, size_t offset){
-    /* addr parameter is ignored - assume NULL */
+    if ((uint32_t) addr % 0x1000)
+        return NULL;
 
-    size_t num_pages = ((length + (0x1000 - 1)) / 0x1000);
+    /* round up to page boundary */
+    uint32_t round_length = (length + 0xFFF) & ~0xFFFU;
 
+    void *res = NULL;
+    /* exe.c */
+    extern t_Process *process_stack;
 
+    if (flags & SYSCALL_MMAP_FLAG_FIXED){
+        umap_pages(process_stack, addr, round_length, prot, flags);
+        res = addr;
+    }
+    else
+        res = ualloc_pages(process_stack, round_length, prot, flags);
+
+    if (res == NULL)
+        return (void*) -1;
+
+    if (flags & SYSCALL_MMAP_FLAG_ANONYMOUS)
+        memset(res, 0, round_length);
+    else {
+        size_t curr_off = sys_lseek(fd, 0, SYSCALL_LSEEK_CUR);
+
+        if (sys_lseek(fd, offset, SYSCALL_LSEEK_SET) != offset)
+            goto fail;
+
+        size_t bytes_read = sys_read(fd, res, length);
+
+        memset(res + bytes_read, 0, length - bytes_read);
+
+        if (sys_lseek(fd, curr_off, SYSCALL_LSEEK_SET) != curr_off)
+            goto fail;
+    }
+
+    return res;
+
+fail:
+    umm_unmap_pages(process_stack, res);
+    return (void*) -1;
 }
 
 int sys_exec(const char *path, int argc, char **argv){

@@ -956,7 +956,7 @@ size_t FAT_read(t_FATFile *file, size_t len, void *data){
         SAL_read(ctx->device, read_len, full_off, data); 
         bytes_read     += read_len;
         file->position += read_len;
-        if (bytes_read > file->size) return 0;
+        if (bytes_read > file->size) return bytes_read;
     }
 
     while (len - bytes_read >= bpc){
@@ -964,7 +964,7 @@ size_t FAT_read(t_FATFile *file, size_t len, void *data){
         SAL_read(ctx->device, bpc, full_off, data + bytes_read); 
         bytes_read += bpc;
         file->position += bpc;
-        if (bytes_read > file->size) return 0;
+        if (bytes_read > file->size) return bytes_read;
     }
 
     /* end on unaligned to cluster */
@@ -974,7 +974,7 @@ size_t FAT_read(t_FATFile *file, size_t len, void *data){
         SAL_read(ctx->device, read_len, full_off, data + bytes_read);
         bytes_read += read_len;
         file->position += read_len;
-        if (bytes_read > file->size) return 0;
+        if (bytes_read > file->size) return bytes_read;
     }
 
     return bytes_read;

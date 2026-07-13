@@ -197,7 +197,7 @@ void VFS_remove(const char *path);
 void VFS_stat(const char *path, const t_FileStat *stat);
 void VFS_fstat(int descriptor, const t_FileStat *stat);
 
-size_t VFS_seek(int descriptor, size_t offset, int whence);
+size_t VFS_seek(int descriptor, ssize_t offset, int whence);
 
 /**
  * modes used for opening files

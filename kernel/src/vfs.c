@@ -327,8 +327,11 @@ void VFS_fstat(int fd, const t_FileStat *stat){
         descriptor->driver->f_Stat(descriptor->descriptor, stat);
 }
 
-size_t VFS_seek(int fd, size_t offset, int whence){
+size_t VFS_seek(int fd, ssize_t offset, int whence){
     t_FileDescriptor *descriptor = descriptor_list[fd];
+
+    if (!descriptor)
+        return -1;
 
     t_FileStat stat;
     VFS_fstat(fd, &stat);
@@ -337,6 +340,9 @@ size_t VFS_seek(int fd, size_t offset, int whence){
 
     switch(whence){
         case VFS_SEEK_SET:
+            if (offset < 0)
+                return -1;
+
             new_pos = offset;
             break;
         case VFS_SEEK_CUR:
@@ -348,7 +354,12 @@ size_t VFS_seek(int fd, size_t offset, int whence){
         case VFS_SEEK_END:
             new_pos = stat.size + offset;
             break;
+        default:
+            return -1;
     } 
+
+    if (new_pos < 0)
+        return -1;
 
     /* expand the file with null bytes if necessary */
     if (new_pos > stat.size){
@@ -371,13 +382,12 @@ size_t VFS_seek(int fd, size_t offset, int whence){
         descriptor->descriptor, new_pos
     );
 
-    /* return new_pos on success, offset - 1 on failure */
     if (
         descriptor->driver->f_Seek(
-            descriptor->driver, -1
+            descriptor->descriptor, -1
         ) == new_pos
     )
         return new_pos;
     else
-        return offset - 1;
+        return -1;
 }

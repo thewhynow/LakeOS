@@ -1,19 +1,7 @@
 #include <kernel/exe.h>
 #include <kernel/tss.h>
 
-static t_Process *process_stack;
-
-pdirectory_t *new_page_directory(){
-    pdirectory_t *new_pd = valloc_page(NULL);
-    memset(new_pd, 0, sizeof *new_pd);
-
-    for (int i = 768; i < 1024; ++i)
-        new_pd->entries[i] = kernel_page_directory.entries[i];
-
-    vmm_unmap_page(new_pd);
-
-    return new_pd;
-}
+t_Process *process_stack;
 
 void *add_entrance_args(void *stack_base, int argc, const char **argv){
     char **temp_argv = kmalloc(sizeof(char*) * (argc + 1));
@@ -66,7 +54,7 @@ t_Process *new_process(int argc, char **argv){
     switch_pd(process_stack->address_space);
     vmm_map_page(
         process_stack->address_space, 
-        curr_page_directory, false
+        curr_page_directory, true, false
     );
 
     new_proc->context = (registers_t){0};

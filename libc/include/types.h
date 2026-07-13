@@ -11,6 +11,7 @@ typedef signed short int16_t;
 typedef signed char int8_t;
 
 typedef long unsigned int size_t;
+typedef long signed int ssize_t;
 
 #define NULL ((void*)0)
 #define bool _Bool

@@ -55,16 +55,16 @@ context switch
 #include <types.h>
 
 typedef enum {
-    PAGE_STRUCT_ENTRY_PRESENT = 0b00000000000000000000000000000001,
-    PAGE_STRUCT_ENTRY_WRITEABLE = 0b00000000000000000000000000000010,
-    PAGE_STRUCT_ENTRY_USER_ACCESS = 0b00000000000000000000000000000100,
+    PAGE_STRUCT_ENTRY_PRESENT       = 0b00000000000000000000000000000001,
+    PAGE_STRUCT_ENTRY_WRITEABLE     = 0b00000000000000000000000000000010,
+    PAGE_STRUCT_ENTRY_USER_ACCESS   = 0b00000000000000000000000000000100,
     PAGE_STRUCT_ENTRY_WRITE_THROUGH = 0b00000000000000000000000000001000,
     PAGE_STRUCT_ENTRY_CACHE_DISABLE = 0b00000000000000000000000000010000,
-    PAGE_STRUCT_ENTRY_ACCESSED = 0b00000000000000000000000000100000,
-    PAGE_STRUCT_ENTRY_DIRTY = 0b00000000000000000000000001000000,
-    PDE_PAGE_SIZE = 0b00000000000000000000000010000000,
-    PAGE_STRUCT_GLOBAL = 0b00000000000000000000000100000000,
-    PAGE_STRUCT_PAGE_FRAME = 0b11111111111111111111000000000000,
+    PAGE_STRUCT_ENTRY_ACCESSED      = 0b00000000000000000000000000100000,
+    PAGE_STRUCT_ENTRY_DIRTY         = 0b00000000000000000000000001000000,
+    PDE_PAGE_SIZE                   = 0b00000000000000000000000010000000,
+    PAGE_STRUCT_GLOBAL              = 0b00000000000000000000000100000000,
+    PAGE_STRUCT_PAGE_FRAME          = 0b11111111111111111111000000000000,
 } PAGE_STRUCT_ENTRY_MASKS;
 
 typedef uint32_t pt_entry_t;
@@ -115,7 +115,7 @@ extern "C" {
 
 void VMM_init();
 
-void *vmm_map_page(void *paddr, void *vaddr, bool ring3);
+void *vmm_map_page(void *paddr, void *vaddr, bool write, bool ring3);
 void vmm_unmap_page(void *vaddr);
 
 /* assumes that the physical address is being passed */
@@ -132,6 +132,24 @@ void *vmm_map_big_page(void *paddr, void *vaddr);
 void *valloc_big_page(void *vaddr);
 
 void *virt_to_phys(void *vaddr);
+
+/**
+ * copies the page table entries from old_pt to new_pt starting
+ *  at start up to end
+ */
+void copy_ptes(ptable_t *new_pt, ptable_t *old_pt, uint32_t start, uint32_t end);
+
+/**
+ * creates a new page table at page directory index pdi
+ *  in page directory pd
+ */
+void new_page_table(pdirectory_t *pd, uint32_t pdi, bool ring3);
+
+/**
+ * creates a new page directory and copies all the relevant
+ *  mappings from other direcrtories
+ */
+pdirectory_t *new_page_directory();
 
 #ifdef __cplusplus
 }

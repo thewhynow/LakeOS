@@ -1,6 +1,8 @@
 #include <kernel/isr.h>
 #include <kernel/pmm.h>
 #include <kernel/vmm.h>
+#include <kernel/umm.h>
+#include <kernel/exe.h>
 #include <string.h>
 
 pdirectory_t *curr_page_directory;
@@ -65,7 +67,7 @@ void *vmm_map_big_page(void *paddr, void *vaddr) {
     return vaddr;
 }
 
-void *vmm_map_page(void *paddr, void *vaddr, bool ring3) {
+void *vmm_map_page(void *paddr, void *vaddr, bool write, bool ring3) {
     pd_entry_t *pdir_entry =
         &curr_page_directory->entries[PAGE_DIR_INDEX((uint32_t)vaddr)];
 
@@ -104,7 +106,8 @@ void *vmm_map_page(void *paddr, void *vaddr, bool ring3) {
 
     /* map the page table entry */
     ENTRY_ADD_ATTRIBUTE(*pte, PAGE_STRUCT_ENTRY_PRESENT);
-    ENTRY_ADD_ATTRIBUTE(*pte, PAGE_STRUCT_ENTRY_WRITEABLE);
+    if (write)
+        ENTRY_ADD_ATTRIBUTE(*pte, PAGE_STRUCT_ENTRY_WRITEABLE);
     if (ring3)
         ENTRY_ADD_ATTRIBUTE(*pte, PAGE_STRUCT_ENTRY_USER_ACCESS);
     ENTRY_SET_FRAME(*pte, paddr);
@@ -147,7 +150,7 @@ void vmm_unmap_page(void *vaddr) {
 
 void *valloc_page(void *vaddr) {
     void *page = alloc_page();
-    return vmm_map_page(page, vaddr ? vaddr : page, false);
+    return vmm_map_page(page, vaddr ? vaddr : page, true, false);
 }
 
 void vfree_page(void *vaddr){
@@ -181,7 +184,7 @@ void VMM_init() {
 
     /* map kernel heap into memory */
     for (size_t i = 0; i < num_pages; ++i)
-        vmm_map_page(bitmap, bitmap + 0xC0000000 + i * 4096, false);
+        vmm_map_page(bitmap, bitmap + 0xC0000000 + i * 4096, true, false);
 
     /* just invalidate the identity-mapping page directory entry */
     curr_page_directory->entries[PAGE_DIR_INDEX(0x0)] = 0;
@@ -208,4 +211,128 @@ void ISR_page_flt_handler(registers_t *regs) {
         for (;;)
             ;
     }
+}
+
+void copy_ptes(ptable_t *new_pt, ptable_t *old_pt, uint32_t start, uint32_t end){
+    /* page table will be mapped to 0xC03FF000 */
+    ptable_t *ptable = (ptable_t *)0xC03FF000;
+
+    /* used to map the page table into memory */
+    pt_entry_t *map_ptable_entry =
+        &higher_half_page_table.entries[PAGE_TABLE_INDEX(0xC03FF000)];
+
+    ENTRY_SET_FRAME(*map_ptable_entry, old_pt);
+    flush_tlb_entry(0xC03FF000);
+
+    static ptable_t temp_ptable;
+    memcpy(
+        temp_ptable.entries + start, 
+        old_pt->entries + start, 
+        (end - start) * sizeof(pt_entry_t)
+    );
+
+    ENTRY_SET_FRAME(*map_ptable_entry, new_pt);
+    flush_tlb_entry(0xC03FF000);
+    
+    memcpy(
+        new_pt->entries + start,
+        temp_ptable.entries + start,
+        (end - start) * sizeof(pt_entry_t)
+    );
+}
+
+void new_page_table(pdirectory_t *pd, uint32_t pdi, bool ring3){
+    void *new_pt = alloc_page();
+    ENTRY_SET_FRAME(pd->entries[pdi], new_pt);
+    ENTRY_ADD_ATTRIBUTE(pd->entries[pdi], PAGE_STRUCT_ENTRY_PRESENT);
+    ENTRY_ADD_ATTRIBUTE(pd->entries[pdi], PAGE_STRUCT_ENTRY_WRITEABLE);
+
+    if (ring3)
+        ENTRY_ADD_ATTRIBUTE(pd->entries[pdi], PAGE_STRUCT_ENTRY_USER_ACCESS);
+
+    /* page table will be mapped to 0xC03FF000 */
+    ptable_t *ptable = (ptable_t *)0xC03FF000;
+
+    /* used to map the page table into memory */
+    pt_entry_t *map_ptable_entry =
+        &higher_half_page_table.entries[PAGE_TABLE_INDEX(0xC03FF000)];
+
+    ENTRY_SET_FRAME(*map_ptable_entry, new_pt);
+    flush_tlb_entry(0xC03FF000);
+    memset(ptable, 0, sizeof(ptable_t));
+}
+
+pdirectory_t *new_page_directory(){
+    pdirectory_t *new_pd = valloc_page(NULL);
+    memset(new_pd, 0, sizeof *new_pd);
+
+    /* exe.c */
+    extern t_Process *process_stack;
+
+    /* copy shared user mappings */
+    for (umm_block_t *block = process_stack->blocks; block; block = block->next){
+        if (!(block->flags | UMM_BLOCK_FLAG_SHARED))
+            continue;
+
+        uint32_t pti = PAGE_TABLE_INDEX((uint32_t)block->start),
+                 pdi = PAGE_DIR_INDEX((uint32_t)block->start),
+                 pti_end = PAGE_TABLE_INDEX((uint32_t)block->start + block->len),
+                 pdi_end = PAGE_DIR_INDEX((uint32_t)block->start + block->len)
+        ;
+
+        if (pti % 1024){
+            pd_entry_t *pde =
+                curr_page_directory->entries + pdi;
+
+            if (!ENTRY_GET_ATTRIBUTE(new_pd->entries[pdi], PAGE_STRUCT_ENTRY_PRESENT))
+                new_page_table(new_pd, pdi, true);
+
+            copy_ptes(
+                (void*) ENTRY_GET_ATTRIBUTE(new_pd->entries[pdi], PAGE_STRUCT_PAGE_FRAME), 
+                (void*) PTE_FROM_PDIR(pde),
+                pti, pdi_end > pdi ? 1024 : pti_end
+            );
+
+            pti = pdi_end > pdi ? pti + pti % 1024 : pti_end;
+            ++pdi;
+        }
+
+        uint32_t block_end = (uint32_t) block->start + block->len;
+
+        for (; pdi < PAGE_DIR_INDEX(block_end); ++pdi, pti += 1024){
+            pd_entry_t *pde =
+               curr_page_directory->entries + pdi;
+
+            if (!ENTRY_GET_ATTRIBUTE(new_pd->entries[pdi], PAGE_STRUCT_ENTRY_PRESENT))
+                new_page_table(new_pd, pdi, true);
+
+            copy_ptes(
+                (void*) ENTRY_GET_ATTRIBUTE(new_pd->entries[pdi], PAGE_STRUCT_PAGE_FRAME), 
+                (void*) PTE_FROM_PDIR(pde),
+                0, 1024
+            );
+        }
+
+        if (pti < pti_end){
+            pd_entry_t *pde =
+               curr_page_directory->entries + pdi;
+
+            if (!ENTRY_GET_ATTRIBUTE(new_pd->entries[pdi], PAGE_STRUCT_ENTRY_PRESENT))
+                new_page_table(new_pd, pdi, true);
+
+            copy_ptes(
+                (void*) ENTRY_GET_ATTRIBUTE(new_pd->entries[pdi], PAGE_STRUCT_PAGE_FRAME), 
+                (void*) PTE_FROM_PDIR(pde),
+                0, pti_end
+            );
+        }
+    }
+
+    /* copy kernel mappings */
+    for (int i = 768; i < 1024; ++i)
+        new_pd->entries[i] = kernel_page_directory.entries[i];
+
+    vmm_unmap_page(new_pd);
+
+    return new_pd;
 }
