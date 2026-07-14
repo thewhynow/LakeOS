@@ -7,42 +7,62 @@
 void ISR_syscall_handler(registers_t *regs){
     switch(regs->eax){
         case SYSCALL_READ: {
-            regs->eax = sys_read(regs->edi, (void*) regs->esi, regs->edx);
+            regs->eax = sys_read(regs->ebx, (void*) regs->ecx, regs->edx);
             break;
         }
 
         case SYSCALL_WRITE: {
-            regs->eax = sys_write(regs->edi, (void*) regs->esi, regs->edx);
+            regs->eax = sys_write(regs->ebx, (void*) regs->ecx, regs->edx);
             break;
         }
 
         case SYSCALL_OPEN: {
-            regs->eax = sys_open((void*) regs->edi, regs->esi);
+            regs->eax = sys_open((void*) regs->ebx, regs->ecx);
             break;
         }
 
         case SYSCALL_CLOSE: {
-            regs->eax = sys_close(regs->edi);
+            regs->eax = sys_close(regs->ebx);
             break;
         }
 
         case SYSCALL_STAT: {
-            regs->eax = sys_stat((void*) regs->edi, (void*) regs->esi);
+            regs->eax = sys_stat((void*) regs->ebx, (void*) regs->ecx);
             break;
         }
 
         case SYSCALL_FSTAT: {
-            regs->eax = sys_fstat(regs->edi, (void*) regs->esi); 
+            regs->eax = sys_fstat(regs->ebx, (void*) regs->ecx); 
+            break;
+        }
+
+        case SYSCALL_LSEEK: {
+            regs->eax = sys_lseek(regs->ebx, regs->ecx, regs->edx);
+            break;
+        }
+
+        case SYSCALL_MMAP: {
+            regs->eax = 
+                (uint32_t) sys_mmap(
+                    (void*) regs->ebx, regs->ecx, 
+                    regs->edx, regs->esi, 
+                    regs->edi, regs->ebp
+                );
+            break;
+        }
+
+        case SYSCALL_MUNMAP: {
+            regs->eax = sys_munmap((void*) regs->ebx, regs->ecx);
             break;
         }
 
         case SYSCALL_EXEC: {
-            regs->eax = sys_exec((void*) regs->edi, regs->esi, (void*) regs->edx);
+            regs->eax = sys_exec((void*) regs->ebx, regs->ecx, (void*) regs->edx);
             break;
         }
 
         case SYSCALL_EXIT: {
-            sys_exit(regs->edi);
+            sys_exit(regs->ebx);
             __builtin_unreachable();
         }
 
@@ -125,6 +145,20 @@ void *sys_mmap(void *addr, size_t length, int prot, int flags, int fd, size_t of
 fail:
     umm_unmap_pages(process_stack, res);
     return (void*) -1;
+}
+
+int sys_munmap(void *addr, size_t length){
+    if ((uint32_t) addr % 0x1000)
+        return -1;
+
+    /* round up to page boundary */
+    uint32_t round_length = (length + 0xFFF) & ~0xFFFU;
+
+    /* exe.c */
+    extern t_Process *process_stack;
+    umm_unmap_range(process_stack, addr, round_length);
+
+    return 0;
 }
 
 int sys_exec(const char *path, int argc, char **argv){

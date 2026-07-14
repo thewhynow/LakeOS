@@ -150,3 +150,65 @@ fail:
     printf("\nFUCKASS USER PAGEFAULT\n");
     for (;;);
 }
+
+void umm_split_block(
+    umm_block_t *prev, umm_block_t *block, void *start_split, void *end_split
+){
+    for (
+        void *addr = start_split; addr < end_split; addr += 0x1000
+    )
+        vfree_page(addr);
+
+
+    umm_block_t *new_block = kmalloc(sizeof(umm_block_t));
+    *new_block = (umm_block_t){
+        .start = block->start,
+        .len   = start_split - block->start,
+        .prot  = block->prot,
+        .flags = block->flags,
+        .next  = block,
+   };
+
+    block->len -= end_split - block->start;
+    block->start = end_split;
+
+    prev->next = new_block;
+}
+
+void umm_unmap_page(t_Process *process, void *page){
+    umm_block_t *iter = process->blocks,
+                *prev = NULL;
+
+    for (; iter; prev = iter, iter = iter->next){
+        if (iter->start == page){
+            iter->start += 0x1000;
+            iter->len -= 0x1000;
+            goto finished;
+        } else
+        if (iter->start < page && page < iter->start + iter->len - 0x1000){
+            umm_split_block(prev, iter, page, page + 0x1000); 
+            goto finished;
+        } else
+        if (page == iter->start + iter->len - 0x1000){
+            iter->len -= 0x1000;
+            goto finished;
+        }
+    }
+
+    return;
+
+finished:
+    if (iter->len == 0){
+        if (prev)
+            prev->next = iter->next;
+        else
+            process->blocks = iter->next;
+    }
+
+    vfree_page(page);
+}
+
+void umm_unmap_range(t_Process *process, void *vaddr, size_t len){
+    for (void *addr = vaddr; addr < vaddr + len; addr += 0x1000)
+        umm_unmap_page(process, addr);
+}

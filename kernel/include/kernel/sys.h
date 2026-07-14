@@ -8,17 +8,30 @@
 #include <kernel/vfs.h>
 #include <kernel/isr.h>
 
+/**
+ * for future reference:
+ *  register argument order:
+ *
+ *  [1] ebx
+ *  [2] ecx
+ *  [3] edx
+ *  [4] esi
+ *  [5] edi
+ *  [6] ebp
+ */
+
 typedef enum {
-    SYSCALL_READ  = 0,
-    SYSCALL_WRITE = 1,
-    SYSCALL_OPEN  = 2,
-    SYSCALL_CLOSE = 3,
-    SYSCALL_STAT  = 4,
-    SYSCALL_FSTAT = 5,
-    SYSCALL_LSEEK = 8,
-    SYSCALL_MMAP  = 9,
-    SYSCALL_EXEC  = 59,
-    SYSCALL_EXIT  = 60
+    SYSCALL_READ   = 0,
+    SYSCALL_WRITE  = 1,
+    SYSCALL_OPEN   = 2,
+    SYSCALL_CLOSE  = 3,
+    SYSCALL_STAT   = 4,
+    SYSCALL_FSTAT  = 5,
+    SYSCALL_LSEEK  = 8,
+    SYSCALL_MMAP   = 9,
+    SYSCALL_MUNMAP = 11,
+    SYSCALL_EXEC   = 59,
+    SYSCALL_EXIT   = 60
 } e_SYSCALL_NUMS;
 
 typedef enum {
@@ -66,6 +79,7 @@ int sys_fstat(int fd, t_FileStat *statbuff);
 size_t sys_lseek(int fd, ssize_t offset, int whence);
 
 void *sys_mmap(void *addr, size_t length, int prot, int flags, int fd, size_t offset);
+int   sys_munmap(void *addr, size_t length);
 
 int  sys_exec(const char *path, int argc, char **argv); 
 void sys_exit(int status);

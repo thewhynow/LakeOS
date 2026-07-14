@@ -79,6 +79,10 @@ typedef uint32_t paddr_t;
 
 #define ENTRY_GET_ATTRIBUTE(entry, attrib) ((entry) & (uint32_t)(attrib))
 
+#define ENTRY_SET_ATTRIBUTE(entry, attrib, value)\
+    ((entry) = ((entry) & ~(uint32_t)attrib) |   \
+               ((uint32_t)(value) & (uint32_t)attrib))
+
 #define ENTRY_SET_FRAME(entry, frame)                                          \
     ((entry) = ((entry) & ~(uint32_t)PAGE_STRUCT_PAGE_FRAME) |                 \
                ((uint32_t)(frame) & (uint32_t)PAGE_STRUCT_PAGE_FRAME))
@@ -150,6 +154,12 @@ void new_page_table(pdirectory_t *pd, uint32_t pdi, bool ring3);
  *  mappings from other direcrtories
  */
 pdirectory_t *new_page_directory();
+
+/**
+ * updates the permissions for the PTE relating to
+ *  vaddr
+ */
+void vmm_new_permissions(void *vaddr, bool write, bool ring3);
 
 #ifdef __cplusplus
 }

@@ -338,3 +338,33 @@ pdirectory_t *new_page_directory(){
 
     return new_pd;
 }
+
+void vmm_new_permissions(void *vaddr, bool write, bool ring3){
+    pd_entry_t *pdir_entry =
+        &curr_page_directory->entries[PAGE_DIR_INDEX((uint32_t)vaddr)];
+
+    /* page table will be mapped to 0xC03FF000 */
+    ptable_t *ptable = (ptable_t *)0xC03FF000;
+
+    /* used to map the page table into memory */
+    pt_entry_t *map_ptable_entry =
+        &higher_half_page_table.entries[PAGE_TABLE_INDEX(0xC03FF000)];
+
+    ENTRY_SET_ATTRIBUTE(*pdir_entry, PAGE_STRUCT_ENTRY_USER_ACCESS, ring3);
+
+    /* page table not present */
+    if (!ENTRY_GET_ATTRIBUTE(*pdir_entry, PAGE_STRUCT_ENTRY_PRESENT))
+        return;
+
+    /* map the page table so it can be used */
+    ENTRY_SET_FRAME(*map_ptable_entry, PTE_FROM_PDIR(pdir_entry));
+    flush_tlb_entry(0xC03FF000);
+
+    /* get the page table entry from the page table */
+    pt_entry_t *pte = &ptable->entries[PAGE_TABLE_INDEX((uint32_t)vaddr)];
+
+    ENTRY_SET_ATTRIBUTE(*pte, PAGE_STRUCT_ENTRY_WRITEABLE, write);
+    ENTRY_SET_ATTRIBUTE(*pte, PAGE_STRUCT_ENTRY_USER_ACCESS, ring3);
+
+    flush_tlb_entry((vaddr_t)vaddr);
+}
