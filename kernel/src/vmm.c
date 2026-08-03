@@ -271,64 +271,65 @@ pdirectory_t *new_page_directory(){
     /* exe.c */
     extern t_Process *process_stack;
 
-    /* copy shared user mappings */
-    for (umm_block_t *block = process_stack->blocks; block; block = block->next){
-        if (!(block->flags | UMM_BLOCK_FLAG_SHARED))
-            continue;
+    if (process_stack)
+        /* copy shared user mappings */
+        for (umm_block_t *block = process_stack->blocks; block; block = block->next){
+            if (!(block->flags | UMM_BLOCK_FLAG_SHARED))
+                continue;
 
-        uint32_t pti = PAGE_TABLE_INDEX((uint32_t)block->start),
-                 pdi = PAGE_DIR_INDEX((uint32_t)block->start),
-                 pti_end = PAGE_TABLE_INDEX((uint32_t)block->start + block->len),
-                 pdi_end = PAGE_DIR_INDEX((uint32_t)block->start + block->len)
-        ;
+            uint32_t pti = PAGE_TABLE_INDEX((uint32_t)block->start),
+                     pdi = PAGE_DIR_INDEX((uint32_t)block->start),
+                     pti_end = PAGE_TABLE_INDEX((uint32_t)block->start + block->len),
+                     pdi_end = PAGE_DIR_INDEX((uint32_t)block->start + block->len)
+            ;
 
-        if (pti % 1024){
-            pd_entry_t *pde =
-                curr_page_directory->entries + pdi;
+            if (pti % 1024){
+                pd_entry_t *pde =
+                    curr_page_directory->entries + pdi;
 
-            if (!ENTRY_GET_ATTRIBUTE(new_pd->entries[pdi], PAGE_STRUCT_ENTRY_PRESENT))
-                new_page_table(new_pd, pdi, true);
+                if (!ENTRY_GET_ATTRIBUTE(new_pd->entries[pdi], PAGE_STRUCT_ENTRY_PRESENT))
+                    new_page_table(new_pd, pdi, true);
 
-            copy_ptes(
-                (void*) ENTRY_GET_ATTRIBUTE(new_pd->entries[pdi], PAGE_STRUCT_PAGE_FRAME), 
-                (void*) PTE_FROM_PDIR(pde),
-                pti, pdi_end > pdi ? 1024 : pti_end
-            );
+                copy_ptes(
+                    (void*) ENTRY_GET_ATTRIBUTE(new_pd->entries[pdi], PAGE_STRUCT_PAGE_FRAME), 
+                    (void*) PTE_FROM_PDIR(pde),
+                    pti, pdi_end > pdi ? 1024 : pti_end
+                );
 
-            pti = pdi_end > pdi ? pti + pti % 1024 : pti_end;
-            ++pdi;
+                pti = pdi_end > pdi ? pti + pti % 1024 : pti_end;
+                ++pdi;
+            }
+
+            uint32_t block_end = (uint32_t) block->start + block->len;
+
+            for (; pdi < PAGE_DIR_INDEX(block_end); ++pdi, pti += 1024){
+                pd_entry_t *pde =
+                   curr_page_directory->entries + pdi;
+
+                if (!ENTRY_GET_ATTRIBUTE(new_pd->entries[pdi], PAGE_STRUCT_ENTRY_PRESENT))
+                    new_page_table(new_pd, pdi, true);
+
+                copy_ptes(
+                    (void*) ENTRY_GET_ATTRIBUTE(new_pd->entries[pdi], PAGE_STRUCT_PAGE_FRAME), 
+                    (void*) PTE_FROM_PDIR(pde),
+                    0, 1024
+                );
+            }
+
+            if (pti < pti_end){
+                pd_entry_t *pde =
+                    curr_page_directory->entries + pdi;
+
+                if (!ENTRY_GET_ATTRIBUTE(new_pd->entries[pdi], PAGE_STRUCT_ENTRY_PRESENT))
+                    new_page_table(new_pd, pdi, true);
+
+                copy_ptes(
+                    (void*) ENTRY_GET_ATTRIBUTE(new_pd->entries[pdi], PAGE_STRUCT_PAGE_FRAME), 
+                    (void*) PTE_FROM_PDIR(pde),
+                    0, pti_end
+                );
+            }
         }
-
-        uint32_t block_end = (uint32_t) block->start + block->len;
-
-        for (; pdi < PAGE_DIR_INDEX(block_end); ++pdi, pti += 1024){
-            pd_entry_t *pde =
-               curr_page_directory->entries + pdi;
-
-            if (!ENTRY_GET_ATTRIBUTE(new_pd->entries[pdi], PAGE_STRUCT_ENTRY_PRESENT))
-                new_page_table(new_pd, pdi, true);
-
-            copy_ptes(
-                (void*) ENTRY_GET_ATTRIBUTE(new_pd->entries[pdi], PAGE_STRUCT_PAGE_FRAME), 
-                (void*) PTE_FROM_PDIR(pde),
-                0, 1024
-            );
-        }
-
-        if (pti < pti_end){
-            pd_entry_t *pde =
-               curr_page_directory->entries + pdi;
-
-            if (!ENTRY_GET_ATTRIBUTE(new_pd->entries[pdi], PAGE_STRUCT_ENTRY_PRESENT))
-                new_page_table(new_pd, pdi, true);
-
-            copy_ptes(
-                (void*) ENTRY_GET_ATTRIBUTE(new_pd->entries[pdi], PAGE_STRUCT_PAGE_FRAME), 
-                (void*) PTE_FROM_PDIR(pde),
-                0, pti_end
-            );
-        }
-    }
 
     /* copy kernel mappings */
     for (int i = 768; i < 1024; ++i)

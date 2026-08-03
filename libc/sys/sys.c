@@ -49,6 +49,30 @@ int fstat(int fd, stat_t *statbuff){
 #endif
 }
 
+size_t lseek(int fd, ssize_t offset, int whence){
+#ifdef __is_libk
+    sys_lseek(fd, offset, whence);
+#else
+
+#endif
+}
+
+void *mmap(void *addr, size_t length, int prot, int flags, int fd, size_t offset){
+#ifdef __is_libk
+    sys_mmap(addr, length, prot, flags, fd, offset);
+#else
+
+#endif
+}
+
+int munmap(void *addr, size_t length){
+#ifdef __is_libk
+    sys_munmap(addr, length);
+#else
+
+#endif
+}
+
 int exec(const char *path, int argc, char **argv){
 #ifdef __is_libk
     sys_exec(path, argc, argv);

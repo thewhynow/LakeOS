@@ -25,6 +25,9 @@ int    open(const char *filename, uint8_t mode);
 int    close(int fd);
 int    stat(const char *filename, stat_t *statbuff);
 int    fstat(int fd, stat_t *statbuff);
+size_t lseek(int fd, ssize_t offset, int whence);
+void  *mmap(void *addr, size_t length, int prot, int flags, int fd, size_t offset);
+int    munmap(void *addr, size_t length);
 int    exec(const char *path, int argc, char **argv);
 void   exit(int status);
 

@@ -22,16 +22,9 @@
 # ============================================================================
 
 UNAME_S := $(shell uname)
-ifeq ($(UNAME_S),Darwin)
-  CC            := i686-elf-gcc
-  AS            := i686-elf-as
-  GRUB_MKRESCUE := i686-elf-grub-mkrescue
-else
-  CROSS         := /home/thewhynow/opt/cross/bin
-  CC            := $(CROSS)/i686-elf-gcc
-  AS            := $(CROSS)/i686-elf-as
-  GRUB_MKRESCUE := grub-mkrescue
-endif
+CC            := i686-elf-gcc
+AS            := i686-elf-as
+GRUB_MKRESCUE := i686-elf-grub-mkrescue
 
 CFLAGS  := -std=gnu99 -ffreestanding -D__is_libk -nostdlib -O0 -w \
            -Ikernel/include -Ilibc/include -g -MMD -MP

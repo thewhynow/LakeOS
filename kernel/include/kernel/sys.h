@@ -11,7 +11,7 @@
 /**
  * for future reference:
  *  register argument order:
- *
+ *  [0] eax // the syscall number
  *  [1] ebx
  *  [2] ecx
  *  [3] edx

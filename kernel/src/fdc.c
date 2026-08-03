@@ -122,7 +122,7 @@ void FDC_init() {
     current_drive = 0;
 
     /* map the buffer so we can access it */
-    buff_vaddr = vmm_map_page(buff_paddr, buff_paddr + 0xC0000000, false);
+    buff_vaddr = vmm_map_page(buff_paddr, buff_paddr + 0xC0000000, true, false);
 
     memset(buff_vaddr, 'A', 4095);
 

@@ -42,6 +42,7 @@ void *new_stack(int argc, const char **argv){
 
 t_Process *new_process(int argc, char **argv){
     t_Process *new_proc = kmalloc(sizeof(t_Process));
+    *new_proc = (t_Process){0};
 
     new_proc->address_space = new_page_directory();
 
@@ -57,7 +58,6 @@ t_Process *new_process(int argc, char **argv){
         curr_page_directory, true, false
     );
 
-    new_proc->context = (registers_t){0};
 
     new_proc->context = (registers_t){
         .ds     = (4 * 8) | 3,
@@ -74,7 +74,7 @@ t_Process *new_process(int argc, char **argv){
 int execute(const void *file_buff, int argc, char **argv){
     new_process(argc, argv);
 
-    f_entry entry = elf_load(file_buff);
+    f_entry entry = elf_load(process_stack, file_buff);
 
     process_stack->context.eip = (uint32_t) entry;
 

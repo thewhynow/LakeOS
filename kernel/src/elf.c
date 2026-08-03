@@ -82,7 +82,7 @@ void elf_load_segments(t_Process *process, elf32_header_t *header){
             ;
 
             umap_pages(
-                process, 
+                process,
                 (void*) page_begin, bss_end - page_begin, 
                 UMM_BLOCK_PROT_EXEC | UMM_BLOCK_PROT_READ | UMM_BLOCK_PROT_WRITE, 
                 UMM_BLOCK_FLAG_PRIVATE | UMM_BLOCK_FLAG_ANONYMOUS | UMM_BLOCK_FLAG_FIXED
