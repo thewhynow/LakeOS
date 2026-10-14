@@ -1,0 +1,19 @@
+var searchData=
+[
+  ['ualloc_5fpages_0',['ualloc_pages',['../umm_8h.html#a217da737f325f02ddb6bb3740b1c3e66',1,'umm.h']]],
+  ['umap_5fpages_1',['umap_pages',['../umm_8h.html#a91224535658c4cd2b45abf7ea491c175',1,'umm.h']]],
+  ['umm_2eh_2',['umm.h',['../umm_8h.html',1,'']]],
+  ['umm_5fblock_5fflag_5fanonymous_3',['UMM_BLOCK_FLAG_ANONYMOUS',['../umm_8h.html#acde37a8965133bc531d5fd7b309d1915a730bd3cdc3038c1c68be8329c75b3a25',1,'umm.h']]],
+  ['umm_5fblock_5fflag_5ffixed_4',['UMM_BLOCK_FLAG_FIXED',['../umm_8h.html#acde37a8965133bc531d5fd7b309d1915a5ce077687456463d739e497c0c426665',1,'umm.h']]],
+  ['umm_5fblock_5fflag_5fgrowsdown_5',['UMM_BLOCK_FLAG_GROWSDOWN',['../umm_8h.html#acde37a8965133bc531d5fd7b309d1915a34babad7af91e23507c37bc80a350b07',1,'umm.h']]],
+  ['umm_5fblock_5fflag_5fprivate_6',['UMM_BLOCK_FLAG_PRIVATE',['../umm_8h.html#acde37a8965133bc531d5fd7b309d1915a2699b80544628cb009ff7346dc0c0ce2',1,'umm.h']]],
+  ['umm_5fblock_5fflag_5fshared_7',['UMM_BLOCK_FLAG_SHARED',['../umm_8h.html#acde37a8965133bc531d5fd7b309d1915aed90894a679e3180cb38134902647289',1,'umm.h']]],
+  ['umm_5fblock_5fprot_5fexec_8',['UMM_BLOCK_PROT_EXEC',['../umm_8h.html#a134765983023f035a44f5c934ed9a8a7acc9e1d2881e723e96ef4fc20f928dd1e',1,'umm.h']]],
+  ['umm_5fblock_5fprot_5fnone_9',['UMM_BLOCK_PROT_NONE',['../umm_8h.html#a134765983023f035a44f5c934ed9a8a7a3713db3fc23206a62e90e79a05dd11ce',1,'umm.h']]],
+  ['umm_5fblock_5fprot_5fread_10',['UMM_BLOCK_PROT_READ',['../umm_8h.html#a134765983023f035a44f5c934ed9a8a7a8b180ba09b22633d77d2d5d8fb1c7d09',1,'umm.h']]],
+  ['umm_5fblock_5fprot_5fwrite_11',['UMM_BLOCK_PROT_WRITE',['../umm_8h.html#a134765983023f035a44f5c934ed9a8a7a6f8cc7f5af97f071abbd56b3701d2bad',1,'umm.h']]],
+  ['umm_5fblock_5ft_12',['umm_block_t',['../structumm__block__t.html',1,'umm_block_t'],['../umm_8h.html#afd743c3051692a1339889161b43365c1',1,'umm_block_t:&#160;umm.h']]],
+  ['umm_5fpage_5fflt_5fhandler_13',['umm_page_flt_handler',['../umm_8h.html#a0d6417f9df5311c00b9495931f8f8ad7',1,'umm.h']]],
+  ['umm_5funmap_5fpages_14',['umm_unmap_pages',['../umm_8h.html#a8e2bc467a5096d14db0b6c132e694706',1,'umm.h']]],
+  ['umm_5funmap_5frange_15',['umm_unmap_range',['../umm_8h.html#ab70fc1f4d78b0d17a79c2b07b1de3bb0',1,'umm.h']]]
+];

@@ -1,3 +1,10 @@
+/**
+ * @file fat.h
+ * @brief fat12/16/32 driver, a vfs driver (see FAT_init). on-disk
+ *  structures are only visible inside the driver (_FAT_H_INTERNAL),
+ *  everything else gets opaque pointers and the FAT_* api at the bottom
+ */
+
 #ifndef _FAT_H
 #define _FAT_H
 
@@ -7,6 +14,10 @@
 
 #ifdef _FAT_H_INTERNAL
 
+/**
+ * the first part of the boot sector (the bpb), the same on FAT12/16/32
+ * at this point, the boot structure differs between FAT16+12 and FAT32
+ */
 typedef struct {
     /**
      * jump instruction to boot code.. 2 forms:
@@ -64,7 +75,7 @@ typedef struct {
      *      - when multiplied by 32, should be an even multiple of
      *        bytes_per_sector
      *      - on FAT16, should be set to 512
-     *   - on FAT32 volumes, set to 0
+     *  - on FAT32 volumes, set to 0
      */
     uint16_t num_root_entries;
     
@@ -123,12 +134,12 @@ typedef struct {
      */
     uint32_t long_sectors;
 
-    /* at this point, the boot structure differs between FAT16+12 and FAT32 */
 } __attribute__((__packed__)) t_BootSectorCommon;
 
+/**
+ * common Boot Sector extension between FAT16+12+32 but at different offsets
+ */
 typedef struct {
-    /* common Boot Sector extension between FAT16+12+32 but at different offsets */
-
     /**
      * the drive number used by int $0x13
      *  - 0x00 for floppies, 0x80 for hard disks
@@ -177,9 +188,11 @@ typedef struct {
     uint8_t file_sys_type[8];
 } __attribute__((__packed__)) t_BootSectorCommonExt;
 
+/**
+ * the rest of the FAT32 boot sector
+ * all fields defined here do NOT exist for FAT12+16 volumes
+ */
 typedef struct {
-    /* all fields defined here do NOT exist for FAT12+16 volumes */
-
     /**
      * number of sectors per FAT
      *  - BootSector.sectors_per_fat must be 0
@@ -228,6 +241,9 @@ typedef struct {
     uint8_t _reserved_2[12];
 } __attribute__((__packed__)) t_BootSector32Ext;
 
+/**
+ * the fsinfo sector of a FAT32 volume
+ */
 typedef struct {
     /**
      * should be equal to: 0x41615252
@@ -279,6 +295,9 @@ typedef struct {
     uint32_t trail_signature;
 } __attribute__((__packed__)) t_FAT32_FSInfo;
 
+/**
+ * what kind of fat a volume is
+ */
 typedef enum {
     FAT_NULL,
     FAT_12,
@@ -289,28 +308,42 @@ typedef enum {
 typedef struct t_FATHandle t_FATHandle;
 typedef struct t_FATContext t_FATContext;
 
+/**
+ * a file or directory on the volume, this is what the vfs sees
+ *  as a t_FSNode
+ */
 struct t_FATHandle {
-    uint32_t dir_cluster,
-             start_cluster;
-    uint8_t  attribs;
-    t_FATContext *ctx;
-    char name[13];
+    uint32_t dir_cluster,   ///< first cluster of the directory it's in
+             start_cluster; ///< first cluster of the file itself
+    uint8_t  attribs;       ///< ENTRY_ATTR_* of the file
+    t_FATContext *ctx;      ///< the volume it's on
+    char name[13];          ///< the name as a string (name.ext), "" for the root
 }; 
 
+/**
+ * a mounted fat volume
+ */
 struct t_FATContext {
+    /** the common part of the boot sector, read at mount */
     t_BootSectorCommon    boot_sector;
     union {
+        /** (FAT12/16) the extension right after the common part */
         t_BootSectorCommonExt  old_ext;
+        /** (FAT32) the extra FAT32 fields, right after the common part */
         t_BootSector32Ext      fat32_ext;
     };
+    /** (FAT32) the common extension, which comes after fat32_ext */
     t_BootSectorCommonExt      fat32_common_ext;
     
+    /** which fat it is */
     e_FAT                 type;
+    /** where the volume is */
     storage_device_t     *device;
 
     /**
      * marks the start of the data region
      *  defined by the clusters
+     * (a byte offset, not a sector)
      */
     uint32_t             data_region_start;
 
@@ -331,9 +364,11 @@ struct t_FATContext {
      */
     uint32_t              bytes_p_clus;
 
+    /** the root directory */
     t_FATHandle root;
 };
 
+/** sectors in one FAT, FAT32 keeps it somewhere else than FAT12/16 */
 #define SECTORS_PER_FAT(context) (            \
     (context)->boot_sector.sectors_per_fat    \
     ? (context)->boot_sector.sectors_per_fat  \
@@ -341,7 +376,7 @@ struct t_FATContext {
 )
 
 /**
- * FAT Notes:
+ * @page fat_notes FAT Notes
  *  - sector0[510] == 0x55 && sector0[511] == 0xAA
  * FAT Datastructure:
  *  - defines a singly-linked list of the clusters in a file
@@ -400,7 +435,7 @@ static const t_TotalSectors_SectorsPerCluster FAT32_NUM_SECTORS_TO_SECTORS_PER_C
 };
 
 /**
- * FAT Directory Structure
+ * @page fat_dirs FAT Directory Structure
  * 
  * - on FAT12+16 media, the root directory is a fixed length and is in a fixed
  *   location on the media. 
@@ -409,7 +444,7 @@ static const t_TotalSectors_SectorsPerCluster FAT32_NUM_SECTORS_TO_SECTORS_PER_C
 
 
 /**
- * when a directory is created:
+ * @page fat_mkdir when a directory is created
  *  - set DirEntry.file_size to 0
  *  - allocate one cluster to the directory
  *  - assign appropriate cluster num fields
@@ -425,7 +460,7 @@ static const t_TotalSectors_SectorsPerCluster FAT32_NUM_SECTORS_TO_SECTORS_PER_C
  */
 
 /**
- * date & time formats:
+ * @page fat_datetime date and time formats
  * date:
  *  [0:4]  -> day of month
  *  [5:8]  -> month of year [1 = jan, 12 = december]
@@ -439,6 +474,9 @@ static const t_TotalSectors_SectorsPerCluster FAT32_NUM_SECTORS_TO_SECTORS_PER_C
  */
 
 
+/**
+ * a directory entry (8.3 name), 32 bytes
+ */
 typedef struct {
     /**
      * short name
@@ -465,10 +503,10 @@ typedef struct {
      */
     uint8_t name[11];
     
-    /* refer to e_FAT32_DirEntryAttribMasks for bit definitions */
+    /** refer to e_DirEntryAttributes for bit definitions */
     uint8_t attributes;
     
-    /* reserved, set to 0 on file creation */
+    /** reserved, set to 0 on file creation */
     uint8_t reserved;
     
     /**
@@ -477,10 +515,12 @@ typedef struct {
      * the value range for this field is 0-199 inclusive
      */
     uint8_t  creation_tenths;
+    /** time of creation, see the date and time formats */
     uint16_t creation_time;
+    /** date of creation */
     uint16_t creation_date;
 
-    /* last date of a read or write operation */
+    /** last date of a read or write operation */
     uint16_t last_access_date;
 
     /**
@@ -489,16 +529,21 @@ typedef struct {
      */
     uint16_t first_cluster_high;
 
+    /** time of the last write */
     uint16_t last_write_time;
+    /** date of the last write */
     uint16_t last_write_date;
 
-    /* low word of the directories first cluster number */
+    /** low word of the directories first cluster number */
     uint16_t first_cluster_low;
 
-    /* the size of the file, in BYTES */
+    /** the size of the file, in BYTES */
     uint32_t file_size;
 } __attribute__((__packed__)) t_ShortDirEntry;
 
+/**
+ * a directory entry holding a piece of a long name, 32 bytes
+ */
 typedef struct {
     /**
      * the order of this entry in a sequence of
@@ -559,81 +604,184 @@ typedef struct {
     uint16_t long_name_3[2];
 } __attribute__((__packed__)) t_LongDirEntry;
 
+/**
+ * what a directory entry is
+ */
 typedef enum {
+    /** not a real entry */
     DIR_ENTRY_INVALID,
+    /** a piece of a long name */
     DIR_ENTRY_LONG_NAME,
     DIR_ENTRY_FILE,
     DIR_ENTRY_DIRECTORY,
+    /** the volume label */
     DIR_ENTRY_VOL_LABEL,
 } e_LongDirEntryType;
 
+/**
+ * @brief returns the final offset for file offset
+ *  offset, for a file starting at cluster
+ *  follows the FAT cluster chain.. essentially
+ * @param ctx the volume
+ * @param cluster first cluster of the file, 0 or 1 for the root on FAT12/16
+ * @param offset offset into the file in bytes
+ * @param clus_fail set to the last cluster of the chain if it ends
+ *  before offset, can be NULL
+ * @return the byte offset on the disk, 0 on failure
+ */
 uint32_t FAT_absolute_offset(t_FATContext *ctx, uint32_t cluster, size_t offset, uint32_t *clus_fail);
 
+/**
+ * @brief reads entry_num entry from the directory
+ *  starting at cluster into out_entry
+ * @param ctx the volume
+ * @param cluster first cluster of the directory
+ * @param entry_num which entry
+ * @param out_entry where the t_ShortDirEntry goes
+ * @return on success, 0.
+ *  on failure, the last cluster that was allocated by the cluster chain
+ */
 uint32_t FAT_dir_entry(t_FATContext *ctx, uint32_t cluster, uint32_t entry_num, void *out_entry);
 
+/**
+ * @brief converts a cluster number to a disk
+ *  offset, treats cluster 0 as root 
+ * @param ctx the volume
+ * @param cluster the cluster
+ * @return the byte offset on the disk
+ */
 size_t FAT_clus_to_off(t_FATContext *ctx, uint32_t cluster);
 
+/**
+ * @brief finds a file in the directory
+ *  starting at cluster and returns
+ *  the cluster number of the file
+ * @param ctx the volume
+ * @param cluster first cluster of the directory
+ * @param name the file name
+ * @return the first cluster of the file, -1 on file-not-found
+ */
 uint32_t FAT_find_file(t_FATContext *ctx, uint32_t cluster, const char *name);
 
+/**
+ * @brief returns the cluster number of the specified file
+ *  since directories are just files, this function
+ *  also handles them and returns the cluster number
+ *  of the directory
+ *  in the root directory special case on FAT12/16,
+ *  this function returns 0 as the cluster number
+ * @param ctx the volume
+ * @param _path path from the root of the volume
+ * @return the first cluster, -1 if any part of the path doesn't exist
+ */
 uint32_t FAT_file_cluster(t_FATContext *ctx, const char *_path);
 
 /**
- * returns true if the given cluster
+ * @brief returns true if the given cluster
  *  is within the root directory
- * on FAT12/16, clusters 0 and 1 are
+ *  on FAT12/16, clusters 0 and 1 are
  *  treated as root directory clusters
+ * @param ctx the volume
+ * @param cluster the cluster
+ * @return true if it's in the root
  */
 bool FAT_is_root(t_FATContext *ctx, uint32_t cluster);
 
 /**
- * finds a free entry in the directory
+ * @brief finds a free entry in the directory
  *  starting at cluster and writes
  *  entry into it
+ *  adds a cluster to the directory if it's full
+ * @param ctx the volume
+ * @param cluster first cluster of the directory
+ * @param entry the t_ShortDirEntry to write
  */
 void FAT_write_entry(t_FATContext *ctx, uint32_t cluster, void *entry);
 
+/**
+ * @brief converts a file name to the 11 byte padded form
+ *  used in directory entries (8 chars, 3 chars of extension,
+ *  spaces to fill, no '.')
+ *  assumes out is a string that contains at minimum 11 characters
+ * @param name the name, like "FILE.TXT"
+ * @param out where the 11 bytes go, no null terminator
+ */
 void FAT_conv_fname(const char *name, char *out);
 
+/**
+ * @brief initializes a directory that starts at cluster and is
+ *  the child of a directory starting in parent_clus, zeroes
+ *  the cluster and makes the `.` and `..` entries
+ * @param ctx the volume
+ * @param cluster first cluster of the new directory
+ * @param parent_clus first cluster of the directory it's in
+ */
 void FAT_init_dir(t_FATContext *ctx, uint32_t cluster, uint32_t parent_clus);
 
+/**
+ * @brief allocates a new cluster at the end of the
+ *  cluster chain starting at cluster
+ * @param ctx the volume
+ * @param cluster first cluster of the file or directory
+ */
 void FAT_allocate_cluster(t_FATContext *ctx, uint32_t cluster);
 
 
+/**
+ * an open file
+ */
 typedef struct {
-    uint32_t starting_clus,
-             parent_clus,
-             position;
+    uint32_t starting_clus, ///< first cluster of the file
+             parent_clus,   ///< first cluster of the directory it's in
+             position;      ///< where reads happen, in bytes
+    /** in bytes, writes happen here (the end) and it grows */
     size_t   size; 
-    /* refer to e_FATFileFlagMasks */
+    /** refer to e_FATFileFlagMasks */
     uint8_t flags;
 
+    /** the volume */
     t_FATContext *ctx;
 } t_FATFile;
 
+/** bytes in a cluster */
 #define BYTES_PER_CLUSTER(ctx)\
     ((ctx)->boot_sector.bytes_per_sector * (ctx)->boot_sector.sectors_per_cluster)
 
+/**
+ * @brief the current date in the format of directory entries
+ * @return the date
+ */
 uint16_t FAT_get_date();
+/**
+ * @brief the current time in the format of directory entries
+ * @return the time
+ */
 uint16_t FAT_get_time();
 
 #endif
 
+/**
+ * how a file was opened, same bits as e_VFSFILEMODES
+ */
 typedef enum {
+    /** reads allowed */
     FAT_FILE_READ  = 0b00000001,
+    /** writes allowed */
     FAT_FILE_WRITE = 0b00000010,
     FAT_FILE_APPND = 0b00000100,
     FAT_FILE_EOF   = 0b00001000
 } e_FATFileFlagMasks;
 
 /**
- * upper two bits of attrib byte are reserved and should be set to 0
+ * the attributes of a directory entry, or'd together
+ *  upper two bits of attrib byte are reserved and should be set to 0
  */
 typedef enum {
-    /* writes to the file should fail */
+    /** writes to the file should fail */
     ENTRY_ATTR_READ_ONLY = 0x01,
-    /* file should not show up in normal directory listings */
+    /** file should not show up in normal directory listings */
     ENTRY_ATTR_HIDDEN    = 0x02,
-    /* file is part of the operating system */
+    /** file is part of the operating system */
     ENTRY_ATTR_SYSTEM    = 0x04,
     /**
      * - there should only be one "file" that has this attribute
@@ -642,14 +790,16 @@ typedef enum {
      * - first_cluster_* should be 0
      */
     ENTRY_ATTR_VOLUME_ID = 0x08,
-    /* file is a container for other files (no shit) */
+    /** file is a container for other files (no shit) */
     ENTRY_ATTR_DIRECTORY = 0x10,
-    /* bit is set when the file is written, renamed, or created */
+    /** bit is set when the file is written, renamed, or created */
     ENTRY_ATTR_ARCHIVE   = 0x20,
     
+    /** all four set, marks a long name entry */
     ENTRY_ATTR_LONG_NAME = 
         ENTRY_ATTR_READ_ONLY | ENTRY_ATTR_HIDDEN | ENTRY_ATTR_SYSTEM | ENTRY_ATTR_VOLUME_ID,
     
+    /** what to mask the attributes with to check for ENTRY_ATTR_LONG_NAME */
     ENTRY_ATTR_MASK_LONG_NAME = ENTRY_ATTR_LONG_NAME | ENTRY_ATTR_DIRECTORY | ENTRY_ATTR_ARCHIVE
 } e_DirEntryAttributes;
 
@@ -657,38 +807,125 @@ typedef enum {
 
 #ifndef _FAT_H_INTERNAL
 
+/** opaque outside the driver: a mounted volume */
 typedef void *t_FATContext;
+/** opaque outside the driver: an open file */
 typedef void *t_FATFile;
+/** opaque outside the driver: a file or directory */
 typedef void *t_FATHandle;
 
+/*
+ * everything below is the fat side of the t_VFSOperations
+ *  function of the same job, see vfs.h
+ */
+
+/**
+ * @brief mounts a fat volume that starts at the beginning of a device
+ * @param dev the device
+ * @return the volume, NULL if the device isn't fat (the 0xAA55 boot signature is missing)
+ */
 t_FATContext *FAT_mount(storage_device_t *dev);
 
+/**
+ * @brief unmounts a volume and frees it
+ * @param ctx the volume
+ */
 void FAT_unmount(t_FATContext *ctx);
 
+/**
+ * @brief gets the root directory
+ * @param ctx the volume
+ * @return the root, it belongs to the volume
+ */
 t_FATHandle *FAT_get_root(t_FATContext *ctx);
 
+/**
+ * @brief finds a file in a directory
+ * @param dir the directory
+ * @param name the file name
+ * @return a new handle, NULL if it isn't there
+ */
 t_FATHandle *FAT_lookup(t_FATHandle *dir, const char *name);
 
+/**
+ * @brief creates a file or directory in a directory
+ * @param dir the directory
+ * @param name the file name
+ * @param attribs e_FileAttribs (the vfs ones) or'd together
+ */
 void FAT_create(t_FATHandle *dir, const char *name, uint8_t attribs);
 
+/**
+ * @brief removes a file: frees its clusters and clears its directory entry
+ * @param file the file
+ */
 void FAT_remove(t_FATHandle *file);
 
+/**
+ * @brief opens a file
+ * @param handle the file
+ * @param mode e_FATFileFlagMasks or'd together
+ * @return the open file
+ */
 t_FATFile *FAT_open(t_FATHandle *handle, uint8_t mode);
 
+/**
+ * @brief closes a file, writes the new size and times to its directory entry
+ * @param file the open file
+ */
 void FAT_close(t_FATFile *file);
 
+/**
+ * @brief writes to the end of a file, allocating clusters as needed
+ * @param file the open file, has to be opened with FAT_FILE_WRITE
+ * @param len how many bytes
+ * @param data the data
+ * @return how many bytes were written, 0 if it can't be written to
+ */
 size_t FAT_write(t_FATFile *file, size_t len, void *data);
 
+/**
+ * @brief reads from the current position of a file and moves the position
+ * @param file the open file, has to be opened with FAT_FILE_READ
+ * @param len how many bytes
+ * @param data where the data goes
+ * @return how many bytes were read, 0 if it can't be read from
+ */
 size_t FAT_read(t_FATFile *file, size_t len, void *data);
 
+/**
+ * @brief gets the nth entry of a directory
+ * @param dir the directory
+ * @param n index of the entry
+ * @return a new handle, NULL on the end of the directory
+ */
 t_FATHandle *FAT_read_dir(t_FATHandle *dir, size_t n);
 
+/**
+ * @brief gets the name of a file
+ * @param handle the file
+ * @return the name, "" for the root
+ */
 const char *FAT_handle_name(t_FATHandle *handle);
 
+/**
+ * @brief gets the size, times and attributes of a file from its directory entry
+ * @param file the file
+ * @param out where the stat goes
+ */
 void FAT_file_stat(t_FATHandle *file, t_FileStat *out);
 
+/**
+ * @brief sets the position of an open file
+ * @param file the open file
+ * @param position the new position, -1 to leave it
+ * @return the position
+ */
 size_t FAT_file_seek(t_FATFile *file, size_t position);
 
+/**
+ * @brief registers the fat driver with the vfs
+ */
 void FAT_init();
 
 #endif

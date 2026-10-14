@@ -1,0 +1,26 @@
+var searchData=
+[
+  ['vfs_5ffile_5fappnd_0',['VFS_FILE_APPND',['../vfs_8h.html#a14ea384e88f932a2a27a587558376dcaae5e19d87ad02f25cf78247016466a14e',1,'vfs.h']]],
+  ['vfs_5ffile_5feof_1',['VFS_FILE_EOF',['../vfs_8h.html#a14ea384e88f932a2a27a587558376dcaaf3c9235c60987053c692faf63652fed5',1,'vfs.h']]],
+  ['vfs_5ffile_5fread_2',['VFS_FILE_READ',['../vfs_8h.html#a14ea384e88f932a2a27a587558376dcaa1a597ab198a857a857e25039fc461c91',1,'vfs.h']]],
+  ['vfs_5ffile_5fwrite_3',['VFS_FILE_WRITE',['../vfs_8h.html#a14ea384e88f932a2a27a587558376dcaa97fabd87f5fdf8610e87afd9354ea13f',1,'vfs.h']]],
+  ['vfs_5fseek_5fcur_4',['VFS_SEEK_CUR',['../vfs_8h.html#ac4dd8826ca8d632adbcdbf01150c88b7ae2f125b981ec960251ddb30df9e3c7d2',1,'vfs.h']]],
+  ['vfs_5fseek_5fend_5',['VFS_SEEK_END',['../vfs_8h.html#ac4dd8826ca8d632adbcdbf01150c88b7aa9ed5a2b2d8b521d80f9f1e515d9efc2',1,'vfs.h']]],
+  ['vfs_5fseek_5fset_6',['VFS_SEEK_SET',['../vfs_8h.html#ac4dd8826ca8d632adbcdbf01150c88b7af0405165e6fac2799b50e84fc9f35904',1,'vfs.h']]],
+  ['vga_5fblack_7',['VGA_BLACK',['../vga_8h.html#ad34fe36eae0625494dcd7d7605aab27fa8e7d71ab42b60c2aebd1e55cbd2d0534',1,'vga.h']]],
+  ['vga_5fblue_8',['VGA_BLUE',['../vga_8h.html#ad34fe36eae0625494dcd7d7605aab27fabd42e3dd83443eefa3b4b59d1c040731',1,'vga.h']]],
+  ['vga_5fdark_5fcyan_9',['VGA_DARK_CYAN',['../vga_8h.html#ad34fe36eae0625494dcd7d7605aab27fabebdae6aee56eebf8f029fff1f349bc3',1,'vga.h']]],
+  ['vga_5fdark_5fgray_10',['VGA_DARK_GRAY',['../vga_8h.html#ad34fe36eae0625494dcd7d7605aab27fa2f6dfc5e0cafb59f015676b2faade427',1,'vga.h']]],
+  ['vga_5fgreen_11',['VGA_GREEN',['../vga_8h.html#ad34fe36eae0625494dcd7d7605aab27faa92216d2b323c76b838d493b5fc416b5',1,'vga.h']]],
+  ['vga_5flight_5fcyan_12',['VGA_LIGHT_CYAN',['../vga_8h.html#ad34fe36eae0625494dcd7d7605aab27faf3f067ff90c2d4c39b196ce6efd86d16',1,'vga.h']]],
+  ['vga_5flight_5fgray_13',['VGA_LIGHT_GRAY',['../vga_8h.html#ad34fe36eae0625494dcd7d7605aab27faf66f33df23ed7110700615c661f1fba4',1,'vga.h']]],
+  ['vga_5flight_5fgreen_14',['VGA_LIGHT_GREEN',['../vga_8h.html#ad34fe36eae0625494dcd7d7605aab27fab176b785e35a2e1219b9e7d5ddd94a5c',1,'vga.h']]],
+  ['vga_5flight_5fred_15',['VGA_LIGHT_RED',['../vga_8h.html#ad34fe36eae0625494dcd7d7605aab27faa28d2b4498dd07cf98b0543123164ae4',1,'vga.h']]],
+  ['vga_5fmagenta_16',['VGA_MAGENTA',['../vga_8h.html#ad34fe36eae0625494dcd7d7605aab27fa61a3ac8180625a56627277eeb0b96bf7',1,'vga.h']]],
+  ['vga_5forange_17',['VGA_ORANGE',['../vga_8h.html#ad34fe36eae0625494dcd7d7605aab27fa2f31e42269f1617d9b37eb076e6de111',1,'vga.h']]],
+  ['vga_5fpink_18',['VGA_PINK',['../vga_8h.html#ad34fe36eae0625494dcd7d7605aab27fa9a2bd7565012d1e55bc4a4255b243587',1,'vga.h']]],
+  ['vga_5fpurple_19',['VGA_PURPLE',['../vga_8h.html#ad34fe36eae0625494dcd7d7605aab27fa11a117eb0c8f226081c5fe5ba7eb69ca',1,'vga.h']]],
+  ['vga_5fred_20',['VGA_RED',['../vga_8h.html#ad34fe36eae0625494dcd7d7605aab27faac4bee61826e802e3d6ecd218c798347',1,'vga.h']]],
+  ['vga_5fwhite_21',['VGA_WHITE',['../vga_8h.html#ad34fe36eae0625494dcd7d7605aab27fa5fdeda4057b6765008970caf1d6990ee',1,'vga.h']]],
+  ['vga_5fyellow_22',['VGA_YELLOW',['../vga_8h.html#ad34fe36eae0625494dcd7d7605aab27fa661eba93d8553421c959431dd0c01ac0',1,'vga.h']]]
+];

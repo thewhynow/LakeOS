@@ -67,7 +67,7 @@ FD ?= 0
 HD ?= 0
 
 run: $(ISO)
-	@qf="-m 512 -cdrom $(ISO) -boot d"; \
+	@qf="-m 512 -cdrom $(ISO) -boot d -display cocoa,zoom-to-fit=on"; \
 	fi=0; hi=1; \
 	i=0; while [ $$i -lt $(FD) ]; do \
 	  dd if=/dev/zero of=floppy$$fi.img bs=512 count=2880 2>/dev/null; \

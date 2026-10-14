@@ -83,6 +83,9 @@ void VFS_init_rootfs(){
             "This disk does not have LakeOS installed.\n"
             "Do you want to install? y/n\n"
         );
+
+        for (;;) ;
+
         char ans = getchar();
 
         if (ans == 'y')
