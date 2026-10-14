@@ -1,4 +1,0 @@
-var dir_009f605b833ac4622acd6c3c0c26c0f0 =
-[
-    [ "kernel", "dir_34c6a35bb0168646a0380914d53769bd.html", "dir_34c6a35bb0168646a0380914d53769bd" ]
-];
