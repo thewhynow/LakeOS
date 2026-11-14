@@ -104,6 +104,9 @@ void exit_process(int code){
 
     if (!revive){
         /* TODO */
+        /**
+         * Technically, this is where we would turn off the computer
+         */
         printf("Fuck...\n");
         for (;;) ;
     }

@@ -16,10 +16,12 @@ void *kmalloc(size_t bytes){
 
     return res;
 }
+
 void *krealloc(void *p, size_t new_sz){
     if (!p) return kmalloc(new_sz);
     size_t alloc_sz = *((size_t*)p - 1);
-    if (new_sz <= alloc_sz) return p;
+    if (new_sz + sizeof (size_t) <= alloc_sz)
+        return p;
 
     t_FreeBlock *iter = freelist;
     do {
@@ -87,17 +89,17 @@ size_t ksize(void *p){
 }
 
 void *find_first_fit(size_t bytes){
-    t_FreeBlock 
+    t_FreeBlock
         *iter = freelist->next,
         *stop = freelist->next;
-    
+
     /* store the size of the allocation as metadata */
     bytes += sizeof(size_t);
 
     bytes = bytes < sizeof(t_FreeBlock) 
         ? sizeof(t_FreeBlock) 
         : bytes;
-    
+
     do {
         size_t *ret;
         /* does the block have enough room for node after alloc? */
@@ -110,6 +112,9 @@ void *find_first_fit(size_t bytes){
         }
         /* won't have enough room for metadata, delete */
         if (iter->size >= bytes){
+            if (iter == freelist)
+                goto next;
+
             ret = (size_t*)iter;
             iter->prev->next = iter->next;
             iter->next->prev = iter->prev;
@@ -117,6 +122,7 @@ void *find_first_fit(size_t bytes){
             return ret + 1;
         }
 
+    next:
         iter = iter->next;
     } while(iter != stop);
 
@@ -126,7 +132,7 @@ void *find_first_fit(size_t bytes){
 void coalesce_neighbors(t_FreeBlock *block){
     t_FreeBlock *prev = block->prev,
                 *next = block->next;
-    
+
     /* nothing to coalesce if only one block exists */
     if (block->next == block || block->prev == block)
         return;
@@ -137,10 +143,10 @@ void coalesce_neighbors(t_FreeBlock *block){
         block->next = next->next;
 
         block->size += next->size;
-    } 
+    }
 
-    else if ((uint8_t*)prev + prev->size == (uint8_t*)block){
-        /* merge 'block' */
+    if ((uint8_t*)prev + prev->size == (uint8_t*)block){
+        /* merge 'prev' */
         prev->next = next;
         next->prev = prev;
 
