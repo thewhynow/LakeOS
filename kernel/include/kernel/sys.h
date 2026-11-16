@@ -30,6 +30,7 @@ typedef enum {
     SYSCALL_LSEEK  = 8,
     SYSCALL_MMAP   = 9,
     SYSCALL_MUNMAP = 11,
+    SYSCALL_MSYNC  = 26,
     SYSCALL_EXEC   = 59,
     SYSCALL_EXIT   = 60
 } e_SYSCALL_NUMS;
@@ -39,6 +40,7 @@ typedef enum {
     SYSCALL_OPEN_WRITE = 0b00000010,
     SYSCALL_OPEN_APPND = 0b00000100,
     SYSCALL_OPEN_EOF   = 0b00001000,
+    SYSCALL_OPEN_CREAT = 0b00010000,
 } e_SYSCALL_OPEN_MODE;
 
 typedef enum {
@@ -65,6 +67,12 @@ typedef enum {
     SYSCALL_MMAP_FLAG_GROWSDOWN = 0x0100,
 } e_SYSCALL_MMAP_FLAG;
 
+typedef enum {
+    SYSCALL_MSYNC_ASYNC      = 0x1,
+    SYSCALL_MSYNC_INVALIDATE = 0x2,
+    SYSCALL_MSYNC_SYNC       = 0x4,
+} e_SYSCALL_MSYNC_FLAG;
+
 void ISR_syscall_handler(registers_t *regs);
 
 size_t sys_read(int fd, void *buff, size_t count);
@@ -80,6 +88,8 @@ size_t sys_lseek(int fd, ssize_t offset, int whence);
 
 void *sys_mmap(void *addr, size_t length, int prot, int flags, int fd, size_t offset);
 int   sys_munmap(void *addr, size_t length);
+
+int msync(void *addr, size_t length, int flags);
 
 int  sys_exec(const char *path, int argc, char **argv); 
 void sys_exit(int status);

@@ -1,3 +1,4 @@
+#include <types.h>
 #include <stddef.h>
 
 #ifndef __UMM_H
@@ -28,20 +29,46 @@ void *ualloc_pages(
 void umap_pages(t_Process *process, void *vaddr, size_t len, int prot, int flags);
 
 /**
+ * maps a file into memory at given vaddr
+ * assumes:
+ *  vaddr was either mapped into memory through umap_pages or returned by ualloc_pages
+ *  len is the size of the mapped memory through umap_pages or returned by ualloc_pages
+ *  fd is a valid, OPEN, file descriptor
+ *  offset < fd.len
+ */
+void umap_file(t_Process *process, void *vaddr, size_t len, int fd, size_t offset);
+
+/**
+ * updates mapping flags for range of address
+ * assumes:
+ *  vaddr % 0x1000 == 0
+ *  len % 0x1000 == 0
+ *  fd is a valid open file descriptor, -1 if anonymous mapping
+ *  the flags of the existing mapping are consistent with the option above
+ *  ** memory in the range of vaddr to len is mapped
+ */
+void umm_update_mapping(t_Process *process, void *vaddr, size_t len, int prot, int fd, size_t offset);
+
+/**
  * unmaps the block starting at vaddr 
  */
 void umm_unmap_pages(t_Process *process, void *vaddr);
 
 void umm_page_flt_handler(void *fault_addr);
 
+/**
+ * unmaps the area of memory starting at vaddr and ending at vaddr + len
+ */
 void umm_unmap_range(t_Process *process, void *vaddr, size_t len);
 
 struct umm_block_t {
     void *start;
+    struct umm_block_t *next;
     size_t len;
+    size_t fd_offset;
     int prot;
     int flags;
-    struct umm_block_t *next;
+    int fd;
 };
 
 typedef enum {
@@ -63,4 +90,3 @@ typedef enum {
 } e_UMM_BLOCK_FLAG;
 
 #endif
-

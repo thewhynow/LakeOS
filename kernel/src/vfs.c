@@ -261,6 +261,9 @@ void VFS_rem_descriptor(int fd){
 int VFS_open(const char *path, uint8_t mode){
     t_VFSNode *vnode = VFS_walk_path(path);
 
+    if (vnode == NULL)
+        return -1;
+
     t_FSFile file = vnode->driver->f_Open(vnode->handle, mode);
 
     t_FileDescriptor *res = kmalloc(sizeof(t_FileDescriptor));

@@ -1,3 +1,4 @@
+#include "kernel/sys.h"
 #define __UMM_H_INTERNAL
 #include <kernel/umm.h>
 #include <kernel/exe.h>
@@ -9,6 +10,10 @@
 static void *const user_memory_start = (void*) 0x00000000,
             *const user_memory_end   = (void*) 0xC0000000
 ;
+
+void umm_split_block(
+    umm_block_t *prev, umm_block_t *block, void *start_split, void *end_split
+);
 
 void umap_pages(t_Process *process, void *vaddr, size_t len, int prot, int flags){
     umm_block_t *new_block = kmalloc(sizeof(umm_block_t));
@@ -49,18 +54,18 @@ void umap_pages(t_Process *process, void *vaddr, size_t len, int prot, int flags
 
 void umm_unmap_pages(t_Process *process, void *vaddr){
     for (
-        umm_block_t *iter = process->blocks; 
-        iter->next; 
-        iter = iter->next
+        umm_block_t *iter = process->blocks, *prev_iter = NULL;
+        iter;
+        prev_iter = iter, iter = iter->next
     )
-        if (iter->next->start == vaddr){
-            umm_block_t *old_block = iter->next;
+        if (iter->start == vaddr){
+            umm_block_t *old_block = iter;
             for (
                 void *i = vaddr; i < vaddr + old_block->len; i += 0x1000
             )
-                vmm_unmap_page(i);
+                vfree_page(i);
 
-            iter->next = iter->next->next;
+            prev_iter->next = iter->next;
             kfree(old_block);
         }
 }
@@ -95,6 +100,58 @@ end:
     return first_fit_start;
 }
 
+static umm_block_t *get_umm_block(t_Process *process, void *addr, umm_block_t **o_prev){
+    for (
+        umm_block_t *iter = process->blocks, *prev = NULL;
+        iter;
+        prev = iter, iter = iter->next
+    )
+        if (iter->start <= addr && addr <= iter->start + iter->len){
+            if (o_prev) *o_prev = prev;
+            return iter;
+        }
+
+    return NULL;
+}
+
+void umm_update_mapping(t_Process *process, void *vaddr, size_t len, int prot, int fd, size_t offset){
+    void *end = vaddr + len;
+    size_t curr_off;
+
+    for (; vaddr < end; vaddr += 0x1000){
+        umm_block_t *prev;
+        umm_block_t *block = get_umm_block(process, vaddr, &prev);
+
+        if (block->prot == prot) continue;
+
+        if (vaddr != block->start){
+            umm_split_block(prev, block, vaddr, vaddr);
+            block = get_umm_block(process, vaddr, &prev);
+        }
+
+        if (vaddr + 0x1000 != block->start + block->len){
+            umm_split_block(prev, block, block->start + 0x1000, block->start + 0x1000);
+            block = get_umm_block(process, vaddr, &prev);
+        }
+
+        block->prot = prot;
+
+        if (fd != -1){
+            block->fd = fd;
+            block->fd_offset = offset;
+
+            /* regenerate on pagefault */
+            vfree_page(block->start);
+
+            offset += 0x1000;
+        }
+
+        /**
+         * fuck you, i don't care about merging blocks
+         */
+    }
+}
+
 void umm_page_flt_handler(void *fault_addr){
     /* exe.c */
     extern t_Process *process_stack;
@@ -123,11 +180,11 @@ void umm_page_flt_handler(void *fault_addr){
         iter->next;
         iter = iter->next
     ){
+        /* pagefault outside of allocated memory */
         if (
             iter->start + iter->len <= fault_addr &&
             fault_addr < iter->next->start
         ){
-                
             if (
                 iter->next->start - (iter->start + iter->len) >= 0x1000 * 2 &&
                 iter->next->flags & UMM_BLOCK_FLAG_GROWSDOWN
@@ -143,6 +200,32 @@ void umm_page_flt_handler(void *fault_addr){
             }
             else
                 goto fail;
+        }
+        /* pagefault inside of allocated memory */
+        else if (
+            iter->start <= fault_addr &&
+            fault_addr <= iter->start + iter->len
+        ){
+            /* file-backed mapping */
+            if (!(iter->flags & SYSCALL_MMAP_FLAG_ANONYMOUS)){
+                vmm_map_page (
+                    alloc_page(), fault_addr,
+                    !!(iter->prot & UMM_BLOCK_PROT_WRITE),
+                    true
+                );
+
+                size_t curr_off = sys_lseek(iter->fd, 0, SYSCALL_LSEEK_CUR);
+
+                if (sys_lseek(iter->fd, iter->fd_offset, SYSCALL_LSEEK_SET) != iter->fd_offset)
+                    goto fail;
+
+                size_t bytes_read = sys_read(iter->fd, fault_addr, 0x1000);
+
+                memset(fault_addr + bytes_read, 0, 0x1000 - bytes_read);
+
+                if (sys_lseek(iter->fd, curr_off, SYSCALL_LSEEK_SET) != curr_off)
+                    goto fail;
+            }
         }
     }
 
@@ -172,7 +255,8 @@ void umm_split_block(
     block->len -= end_split - block->start;
     block->start = end_split;
 
-    prev->next = new_block;
+    if (prev)
+        prev->next = new_block;
 }
 
 void umm_unmap_page(t_Process *process, void *page){
@@ -186,7 +270,7 @@ void umm_unmap_page(t_Process *process, void *page){
             goto finished;
         } else
         if (iter->start < page && page < iter->start + iter->len - 0x1000){
-            umm_split_block(prev, iter, page, page + 0x1000); 
+            umm_split_block(prev, iter, page, page + 0x1000);
             goto finished;
         } else
         if (page == iter->start + iter->len - 0x1000){
@@ -203,6 +287,8 @@ finished:
             prev->next = iter->next;
         else
             process->blocks = iter->next;
+
+        kfree(iter);
     }
 
     vfree_page(page);

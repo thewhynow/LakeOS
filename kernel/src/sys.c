@@ -5,6 +5,9 @@
 #include <sys/sys.h>
 
 void ISR_syscall_handler(registers_t *regs){
+    /* interrupt gate clears IF; re-enable so PIT ticks advance (PIT_sleep) */
+    asm volatile("sti");
+
     switch(regs->eax){
         case SYSCALL_READ: {
             regs->eax = sys_read(regs->ebx, (void*) regs->ecx, regs->edx);
@@ -70,6 +73,8 @@ void ISR_syscall_handler(registers_t *regs){
             regs->eax = -1;
         }
     }
+
+    asm volatile("cli");
 }
 
 size_t sys_read(int fd, void *buff, size_t count){
@@ -81,7 +86,14 @@ size_t sys_write(int fd, const void *buff, size_t count){
 }
 
 int sys_open(const char *filename, uint8_t mode){
-    return VFS_open(filename, mode);
+    int fd = VFS_open(filename, mode);
+
+    if (fd == -1 && mode & SYSCALL_OPEN_CREAT){
+        VFS_create(filename, 0);
+        fd = VFS_open(filename, mode);
+    }
+
+    return fd;
 }
 
 int sys_close(int fd){
@@ -105,7 +117,7 @@ size_t sys_lseek(int fd, ssize_t offset, int whence){
 
 void *sys_mmap(void *addr, size_t length, int prot, int flags, int fd, size_t offset){
     if ((uint32_t) addr % 0x1000)
-        return NULL;
+        return (void*)-1;
 
     /* round up to page boundary */
     uint32_t round_length = (length + 0xFFF) & ~0xFFFU;
@@ -126,19 +138,8 @@ void *sys_mmap(void *addr, size_t length, int prot, int flags, int fd, size_t of
 
     if (flags & SYSCALL_MMAP_FLAG_ANONYMOUS)
         memset(res, 0, round_length);
-    else {
-        size_t curr_off = sys_lseek(fd, 0, SYSCALL_LSEEK_CUR);
-
-        if (sys_lseek(fd, offset, SYSCALL_LSEEK_SET) != offset)
-            goto fail;
-
-        size_t bytes_read = sys_read(fd, res, length);
-
-        memset(res + bytes_read, 0, length - bytes_read);
-
-        if (sys_lseek(fd, curr_off, SYSCALL_LSEEK_SET) != curr_off)
-            goto fail;
-    }
+    else
+        umm_update_mapping(process_stack, addr, round_length, prot, fd, offset);
 
     return res;
 
@@ -159,6 +160,16 @@ int sys_munmap(void *addr, size_t length){
     umm_unmap_range(process_stack, addr, round_length);
 
     return 0;
+}
+
+int sys_msync(void *addr, size_t length, int flags){
+    /**
+     * fuck you, i'm not keeping track of every mapping of a file
+     */
+    if (flags & SYSCALL_MSYNC_INVALIDATE)
+        return -1;
+
+
 }
 
 int sys_exec(const char *path, int argc, char **argv){
