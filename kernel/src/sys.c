@@ -2,7 +2,7 @@
 #include <kernel/tty.h>
 #include <kernel/kmm.h>
 #include <kernel/exe.h>
-#include <sys/sys.h>
+#include <sys/syscall.h>
 
 void ISR_syscall_handler(registers_t *regs){
     /* interrupt gate clears IF; re-enable so PIT ticks advance (PIT_sleep) */
@@ -54,8 +54,18 @@ void ISR_syscall_handler(registers_t *regs){
             break;
         }
 
+        case SYSCALL_MPROTECT: {
+            regs->eax = sys_mprotect((void*) regs->ebx, regs->ecx, regs->edx);
+            break;
+        }
+
         case SYSCALL_MUNMAP: {
             regs->eax = sys_munmap((void*) regs->ebx, regs->ecx);
+            break;
+        }
+
+        case SYSCALL_MSYNC: {
+            regs->eax = sys_msync((void*) regs->ebx, regs->ecx, regs->edx);
             break;
         }
 
@@ -163,13 +173,15 @@ int sys_munmap(void *addr, size_t length){
 }
 
 int sys_msync(void *addr, size_t length, int flags){
-    /**
-     * fuck you, i'm not keeping track of every mapping of a file
-     */
+    /* exe.c */
+    extern t_Process *process_stack;
+
     if (flags & SYSCALL_MSYNC_INVALIDATE)
         return -1;
 
+    umm_sync_file(process_stack, addr, length);
 
+    return 0;
 }
 
 int sys_exec(const char *path, int argc, char **argv){
@@ -181,9 +193,9 @@ int sys_exec(const char *path, int argc, char **argv){
     read(fd, buff, file_stat.size);
     close(fd);
 
-    execute(buff, argc, argv); 
+    execute(buff, argc, argv);
 }
 
 void sys_exit(int status){
-    exit_process(status);  
+    exit_process(status);
 }

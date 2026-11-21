@@ -1,5 +1,4 @@
 #include <types.h>
-#include <stddef.h>
 
 #ifndef __UMM_H
 #define __UMM_H
@@ -48,6 +47,11 @@ void umap_file(t_Process *process, void *vaddr, size_t len, int fd, size_t offse
  *  ** memory in the range of vaddr to len is mapped
  */
 void umm_update_mapping(t_Process *process, void *vaddr, size_t len, int prot, int fd, size_t offset);
+
+/**
+ * syncs the mapping of a file back to disk,
+ */
+void umm_sync_file(t_Process *process, void *vaddr, size_t len);
 
 /**
  * unmaps the block starting at vaddr 

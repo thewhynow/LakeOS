@@ -152,6 +152,33 @@ void umm_update_mapping(t_Process *process, void *vaddr, size_t len, int prot, i
     }
 }
 
+void umm_sync_file(t_Process *process, void *vaddr, size_t len){
+    void *end = vaddr + len;
+    int fd = -1;
+    while (vaddr < end){
+        umm_block_t *block = get_umm_block(process, vaddr, NULL);
+        fd = block->fd;
+
+        size_t curr_off = sys_lseek(block->fd, 0, SYSCALL_LSEEK_CUR);
+
+        t_FileStat filestat;
+        sys_fstat(fd, &filestat);
+
+        size_t fsize = filestat.size;
+        size_t to_write = 0;
+
+        if (fsize - block->fd_offset >= 0x1000)
+            to_write = 0x1000;
+        else
+            to_write = fsize - block->fd_offset;
+
+        sys_lseek(block->fd, block->fd_offset, SYSCALL_LSEEK_SET);
+        vaddr += sys_write(block->fd, vaddr, to_write);
+
+        sys_lseek(block->fd, curr_off, SYSCALL_LSEEK_SET);
+    }
+}
+
 void umm_page_flt_handler(void *fault_addr){
     /* exe.c */
     extern t_Process *process_stack;

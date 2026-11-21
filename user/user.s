@@ -25,7 +25,7 @@ _start:
 
 // close(fd)
     movl $3, %eax
-    movl fd, %ebx
+    movl $fd, %ebx
     int $0x80
 
 // exit(29)
